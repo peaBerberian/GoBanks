@@ -1,0 +1,11 @@
+{
+  "databases": {
+    "databaseType": "mySql|(file|mongoDB coming soon)",
+    "mySql": {
+      "user": "myUsername",
+      "password": "myPassword",
+      "access": "myUrl",
+      "database": "myDatabaseName"
+    }
+  }
+}
