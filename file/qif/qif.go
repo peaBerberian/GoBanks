@@ -9,7 +9,7 @@ import "strings"
 import t "github.com/peaberberian/GoBanks/database/types"
 import "github.com/peaberberian/GoBanks/utils"
 
-func ParseFile(f *os.File, dateFormat string) (ts []t.Transaction, err error) {
+func ParseFile(f *os.File, accountId int, dateFormat string) (ts []t.Transaction, err error) {
 	var label string
 	var transactionDate time.Time
 	var recordDate time.Time
@@ -37,6 +37,7 @@ func ParseFile(f *os.File, dateFormat string) (ts []t.Transaction, err error) {
 
 			case "^":
 				ts = append(ts, t.Transaction{
+					AccountId:       accountId,
 					Label:           label,
 					TransactionDate: transactionDate,
 					Debit:           debit,
