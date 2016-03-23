@@ -28,6 +28,14 @@ func main() {
 	// }
 }
 
+func NewUser(username string, password string) (user types.User, err error) {
+	return
+}
+
+func Authenticate(user types.User, password string) (err error) {
+	return
+}
+
 // just for tests
 func AddQifFile(filePath string, dateFormat string, db types.GoBanksDataBase, accountId int) (err error) {
 	var f *os.File

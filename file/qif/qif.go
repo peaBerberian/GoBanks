@@ -6,10 +6,10 @@ import "bufio"
 import "time"
 import "strings"
 
-import t "github.com/peaberberian/GoBanks/database/types"
+import "github.com/peaberberian/GoBanks/database/types"
 import "github.com/peaberberian/GoBanks/utils"
 
-func ParseFile(f *os.File, accountId int, dateFormat string) (ts []t.Transaction, err error) {
+func ParseFile(f *os.File, accountDbId int, dateFormat string) (ts []types.Transaction, err error) {
 	var label string
 	var transactionDate time.Time
 	var recordDate time.Time
@@ -36,14 +36,14 @@ func ParseFile(f *os.File, accountId int, dateFormat string) (ts []t.Transaction
 			switch string(strLine[0]) {
 
 			case "^":
-				ts = append(ts, t.Transaction{
-					AccountId:       accountId,
-					Label:           label,
-					TransactionDate: transactionDate,
-					Debit:           debit,
-					Credit:          credit,
-					Reference:       reference,
-					RecordDate:      recordDate,
+				ts = append(ts, types.Transaction{
+					LinkedAccountDbId: accountDbId,
+					Label:             label,
+					TransactionDate:   transactionDate,
+					Debit:             debit,
+					Credit:            credit,
+					Reference:         reference,
+					RecordDate:        recordDate,
 				})
 
 				label = ""
