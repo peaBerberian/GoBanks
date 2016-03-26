@@ -18,7 +18,7 @@ type GoBanksDataBase interface {
 	RemoveUser(int) error
 
 	// Update the attributes of a single user, from its DbId
-	UpdateUser(int, User) error
+	UpdateUser(User) error
 
 	// Get a single user, from its DbId
 	GetUser(int) (User, error)
@@ -34,7 +34,7 @@ type GoBanksDataBase interface {
 	RemoveBank(int) error
 
 	// Update the attributes of a single bank, from its DbId
-	UpdateBank(int, Bank) error
+	UpdateBank(Bank) error
 
 	// Get a single bank, from its DbId
 	GetBank(int) (Bank, error)
@@ -50,7 +50,7 @@ type GoBanksDataBase interface {
 	RemoveBankAccount(int) error
 
 	// Update the attributes of a single account, from its DbId
-	UpdateBankAccount(int, BankAccount) error
+	UpdateBankAccount(BankAccount) error
 
 	// Get a single account, from its DbId
 	GetBankAccount(int) (BankAccount, error)
@@ -66,7 +66,7 @@ type GoBanksDataBase interface {
 	RemoveTransaction(int) error
 
 	// Update the attributes of a single transaction, from its DbId
-	UpdateTransaction(int, Transaction) error
+	UpdateTransaction(Transaction) error
 
 	// Get a single transaction, from its DbId
 	GetTransaction(int) (Transaction, error)
@@ -78,32 +78,34 @@ type GoBanksDataBase interface {
 type BankAccountFilters struct {
 	Filters struct {
 		Banks bool
-		Name  bool
+		Names bool
 	}
 	Values struct {
 		Banks []int
-		Name  []string
+		Names []string
 	}
 }
 
 type BankFilters struct {
 	Filters struct {
 		Users bool
-		Name  bool
+		Names bool
 	}
 	Values struct {
 		Users []int
-		Name  []string
+		Names []string
 	}
 }
 
 type UserFilters struct {
 	Filters struct {
 		Names     bool
+		Tokens    bool
 		Permanent bool
 	}
 	Values struct {
 		Names     []string
+		Tokens    []string
 		Permanent bool
 	}
 }
@@ -189,6 +191,12 @@ type User struct {
 
 	// Password's salt
 	Salt string
+
+	// User's current token
+	Token string
+
+	// True if the user is a permanent one
+	Permanent bool
 }
 
 type Bank struct {

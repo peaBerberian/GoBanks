@@ -20,11 +20,12 @@ func (gbs *GoBanksSql) AddUser(user dbt.User) (id int, err error) {
 	var res sql.Result
 	gbs.mutex.Lock()
 	res, err = gbs.db.Exec("INSERT INTO user "+
-		"(name, password, salt) "+
-		"values (?, ?)",
+		"(name, password, salt, permanent) "+
+		"values (?, ?, ?, ?)",
 		user.Name,
 		user.PasswordHash,
 		user.Salt,
+		user.Permanent,
 	)
 	gbs.mutex.Unlock()
 	if err != nil {
@@ -45,14 +46,16 @@ func (gbs *GoBanksSql) RemoveUser(userId int) (err error) {
 	return
 }
 
-func (gbs *GoBanksSql) UpdateUser(userId int, user dbt.User) (err error) {
+func (gbs *GoBanksSql) UpdateUser(user dbt.User) (err error) {
 	gbs.mutex.Lock()
 	_, err = gbs.db.Exec("UPDATE user "+
-		"SET name=?, password=?, salt=? "+
+		"SET name=?, password=?, salt=?, token=? "+
 		"WHERE id=?",
 		user.Name,
 		user.PasswordHash,
 		user.Salt,
+		user.Token,
+		user.DbId,
 	)
 	gbs.mutex.Unlock()
 	if err != nil {
@@ -76,6 +79,27 @@ func (gbs *GoBanksSql) GetUser(userId int) (t dbt.User, err error) {
 
 // TODO filters on Name / Permanent status
 func (gbs *GoBanksSql) GetUsers(filters dbt.UserFilters,
-) (us []dbt.User, err error) {
+) (usrs []dbt.User, err error) {
+	gbs.mutex.Lock()
+	var rows = new(sql.Rows)
+	rows, err = gbs.db.Query("select id, name, password, salt, permanent from user"+
+		" WHERE name=?",
+		filters.Values.Names[0])
+	gbs.mutex.Unlock()
+
+	if err != nil {
+		return []dbt.User{}, err
+	}
+
+	for rows.Next() {
+		var usr dbt.User
+		err = rows.Scan(&usr.DbId, &usr.Name, &usr.PasswordHash, &usr.Salt,
+			&usr.Permanent)
+		if err != nil {
+			return
+		}
+		usrs = append(usrs, usr)
+	}
+
 	return
 }

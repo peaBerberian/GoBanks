@@ -37,7 +37,7 @@ func (gbs *GoBanksSql) RemoveBank(bankId int) (err error) {
 	return
 }
 
-func (gbs *GoBanksSql) UpdateBank(bankId int, bnk dbt.Bank) (err error) {
+func (gbs *GoBanksSql) UpdateBank(bnk dbt.Bank) (err error) {
 	gbs.mutex.Lock()
 	_, err = gbs.db.Exec("UPDATE bank "+
 		"SET bank_id=?, name=? "+

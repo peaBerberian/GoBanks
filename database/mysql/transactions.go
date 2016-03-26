@@ -45,8 +45,8 @@ func (gbs *GoBanksSql) RemoveTransaction(transacId int) (err error) {
 	return
 }
 
-func (gbs *GoBanksSql) UpdateTransaction(transacId int,
-	transac dbt.Transaction) (err error) {
+func (gbs *GoBanksSql) UpdateTransaction(transac dbt.Transaction,
+) (err error) {
 	gbs.mutex.Lock()
 	_, err = gbs.db.Exec("UPDATE transaction "+
 		"SET account_id=?, label=?, debit=?, credit=?,"+

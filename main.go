@@ -9,6 +9,8 @@ import "github.com/peaberberian/GoBanks/database/types"
 // just for tests
 import "github.com/peaberberian/GoBanks/file/qif"
 
+import "github.com/peaberberian/GoBanks/login"
+
 func main() {
 	conf, err := config.GetConfig()
 	if err != nil {
@@ -20,37 +22,6 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-
-	// // tests
-	// err = AddQifFile("./toto.qif", "DD/MM/YY", db, 1)
-	// if err != nil {
-	// 	panic(err)
-	// }
-}
-
-func NewUser(username string, password string) (user types.User, err error) {
-	// TODO here bcrypt salt etc.
-	return
-}
-
-func RegisterUser(db types.GoBanksDataBase, username string, password string) error {
-	// TODO checks if name is not already taken
-	user, err := NewUser(username, password)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.AddUser(user)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func Authenticate(user types.User, password string) (err error) {
-	// TODO get ALL names
-	return
 }
 
 // just for tests
