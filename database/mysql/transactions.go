@@ -74,8 +74,24 @@ func (gbs *GoBanksSql) GetTransaction(transacId int) (t dbt.Transaction, err err
 }
 
 // TODO
-func (gbs *GoBanksSql) GetTransactions(filters dbt.TransactionFilters) (ts []dbt.Transaction, err error) {
+func (gbs *GoBanksSql) GetTransactions(filters dbt.TransactionFilters,
+) (ts []dbt.Transaction, err error) {
 	gbs.mutex.Lock()
+	var rows = new(sql.Rows)
+	rows, err = gbs.db.Query("select id, account_id, label, debit, credit,"+
+		" date_of_transaction, date_of_record from transaction where account_id=?",
+		filters.Accounts[0])
+	if err != nil {
+		return []dbt.Transaction{}, err
+	}
 	gbs.mutex.Unlock()
+	for rows.Next() {
+		var t dbt.Transaction
+		err = rows.Scan(&t.DbId, &t.LinkedAccountDbId, &t.Label, &t.Debit, &t.Credit, &t.TransactionDate, &t.RecordDate)
+		if err != nil {
+			return
+		}
+		ts = append(ts, t)
+	}
 	return
 }
