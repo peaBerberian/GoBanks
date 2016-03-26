@@ -29,10 +29,27 @@ func main() {
 }
 
 func NewUser(username string, password string) (user types.User, err error) {
+	// TODO here bcrypt salt etc.
 	return
 }
 
+func RegisterUser(db types.GoBanksDataBase, username string, password string) error {
+	// TODO checks if name is not already taken
+	user, err := NewUser(username, password)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.AddUser(user)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func Authenticate(user types.User, password string) (err error) {
+	// TODO get ALL names
 	return
 }
 
