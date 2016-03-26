@@ -65,3 +65,9 @@ func (gbs *GoBanksSql) GetBank(bankId int) (t dbt.Bank, err error) {
 	}
 	return
 }
+
+// TODO filters on Name / Users
+func (gbs *GoBanksSql) GetBanks(filters dbt.BankFilters) (bs []dbt.Bank,
+	err error) {
+	return
+}

@@ -12,9 +12,11 @@ type GoBanksSql struct {
 	mutex sync.Mutex
 }
 
-func New(user string, pw string, access string, database string) (gbs *GoBanksSql, err error) {
+func New(user string, pw string, access string, database string,
+) (gbs *GoBanksSql, err error) {
 	var db *sql.DB
-	db, err = sql.Open("mysql", user+":"+pw+"@"+access+"/"+database+"?parseTime=true")
+	db, err = sql.Open("mysql", user+":"+pw+"@"+access+"/"+database+
+		"?parseTime=true")
 	if err != nil {
 		return
 	}

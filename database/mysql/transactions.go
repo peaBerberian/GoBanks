@@ -94,7 +94,7 @@ func (gbs *GoBanksSql) GetTransactions(filters dbt.TransactionFilters,
 	rows, err = gbs.db.Query("select id, account_id, label, debit, credit,"+
 		" date_of_transaction, date_of_record from transaction"+
 		" WHERE account_id=?",
-		filters.Accounts[0])
+		filters.Values.Accounts[0])
 	gbs.mutex.Unlock()
 
 	if err != nil {

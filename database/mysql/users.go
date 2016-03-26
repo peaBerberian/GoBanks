@@ -73,3 +73,9 @@ func (gbs *GoBanksSql) GetUser(userId int) (t dbt.User, err error) {
 	}
 	return
 }
+
+// TODO filters on Name / Permanent status
+func (gbs *GoBanksSql) GetUsers(filters dbt.UserFilters,
+) (us []dbt.User, err error) {
+	return
+}

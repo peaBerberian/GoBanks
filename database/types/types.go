@@ -23,6 +23,9 @@ type GoBanksDataBase interface {
 	// Get a single user, from its DbId
 	GetUser(int) (User, error)
 
+	// Get multiple users, based on filters
+	GetUsers(UserFilters) ([]User, error)
+
 	// Add a single
 	// Returns bank's DbId / possible error
 	AddBank(Bank) (int, error)
@@ -36,6 +39,9 @@ type GoBanksDataBase interface {
 	// Get a single bank, from its DbId
 	GetBank(int) (Bank, error)
 
+	// Get multiple banks, based on filters
+	GetBanks(BankFilters) ([]Bank, error)
+
 	// Add a single account for a specific bank DbId
 	// Returns transaction's DbId / possible error
 	AddBankAccount(BankAccount) (int, error)
@@ -48,6 +54,9 @@ type GoBanksDataBase interface {
 
 	// Get a single account, from its DbId
 	GetBankAccount(int) (BankAccount, error)
+
+	// Get multiple account, based on filters
+	GetBankAccounts(BankAccountFilters) ([]BankAccount, error)
 
 	// Add a single transaction
 	// Returns transaction's DbId / possible error
@@ -66,20 +75,70 @@ type GoBanksDataBase interface {
 	GetTransactions(TransactionFilters) ([]Transaction, error)
 }
 
+type BankAccountFilters struct {
+	Filters struct {
+		Banks bool
+		Name  bool
+	}
+	Values struct {
+		Banks []int
+		Name  []string
+	}
+}
+
+type BankFilters struct {
+	Filters struct {
+		Users bool
+		Name  bool
+	}
+	Values struct {
+		Users []int
+		Name  []string
+	}
+}
+
+type UserFilters struct {
+	Filters struct {
+		Names     bool
+		Permanent bool
+	}
+	Values struct {
+		Names     []string
+		Permanent bool
+	}
+}
+
 type TransactionFilters struct {
-	Accounts            []int
-	Types               []string
-	FromTransactionDate time.Time
-	ToTransactionDate   time.Time
-	FromRecordDate      time.Time
-	ToRecordDate        time.Time
-	MinDebit            float32
-	MaxDebit            float32
-	MinCredit           float32
-	MaxCredit           float32
-	SearchLabel         string
-	SearchDescription   string
-	SearchReference     string
+	Filters struct {
+		Accounts            bool
+		Types               bool
+		FromTransactionDate bool
+		ToTransactionDate   bool
+		FromRecordDate      bool
+		ToRecordDate        bool
+		MinDebit            bool
+		MaxDebit            bool
+		MinCredit           bool
+		MaxCredit           bool
+		SearchLabel         bool
+		SearchDescription   bool
+		SearchReference     bool
+	}
+	Values struct {
+		Accounts            []int
+		Types               []string
+		FromTransactionDate time.Time
+		ToTransactionDate   time.Time
+		FromRecordDate      time.Time
+		ToRecordDate        time.Time
+		MinDebit            float32
+		MaxDebit            float32
+		MinCredit           float32
+		MaxCredit           float32
+		SearchLabel         string
+		SearchDescription   string
+		SearchReference     string
+	}
 }
 
 type Transaction struct {
