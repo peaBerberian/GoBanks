@@ -2,42 +2,34 @@ package login
 
 import "crypto/rand"
 import "io"
-import "github.com/peaberberian/GoBanks/database/types"
 import "golang.org/x/crypto/bcrypt"
 
-func NewUser(username string, password string) (user types.User,
-	err error) {
-	byteSalt := make([]byte, 32)
-	_, err = io.ReadFull(rand.Reader, byteSalt)
-	var salt = string(byteSalt)
+import dbt "github.com/peaberberian/GoBanks/database/types"
+
+func LoginUser(db dbt.GoBanksDataBase, username string,
+	password string) (string, error) {
+
+	user, err := GetUserFromUsername(db, username)
 	if err != nil {
-		return user, err
+		return "", err
 	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(salt+password), 4)
+	err = authenticateUser(user, password)
 	if err != nil {
-		return user, err
+		return "", err
 	}
-	user = types.User{
-		Name:         username,
-		PasswordHash: string(hash),
-		Salt:         salt,
-		Permanent:    true,
+
+	// Add token TODO look at JWT
+	user.Token = generateToken()
+	err = db.UpdateUser(user)
+	if err != nil {
+		return "", err
 	}
-	return user, nil
+
+	return user.Token, nil
 }
 
-func AuthenticateUser(user types.User, password string) (err error) {
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash),
-		[]byte(user.Salt+password))
-	if err != nil {
-		return LoginError{err: err.Error(),
-			ErrorCode: LoginErrorWrongPassword}
-	}
-	return nil
-}
-
-func RegisterUser(db types.GoBanksDataBase, username string,
-	password string) (user types.User, err error) {
+func RegisterUser(db dbt.GoBanksDataBase, username string,
+	password string) (user dbt.User, err error) {
 
 	usernameTaken, err := isUsernameTaken(db, username)
 	if err != nil {
@@ -45,11 +37,11 @@ func RegisterUser(db types.GoBanksDataBase, username string,
 	}
 	if usernameTaken {
 		err = alreadyCreatedUserError{username: username}
-		return types.User{}, LoginError{err: err.Error(),
+		return dbt.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorAlreadyTakenUsername}
 	}
 
-	user, err = NewUser(username, password)
+	user, err = newUser(username, password)
 	if err != nil {
 		return
 	}
@@ -62,51 +54,25 @@ func RegisterUser(db types.GoBanksDataBase, username string,
 	return
 }
 
-// TODO look at JWT
-func generateToken() string {
-	return "aaaa"
-}
-
-func LoginUser(db types.GoBanksDataBase, username string,
-	password string) (string, error) {
-
-	user, err := GetUserFromUsername(db, username)
-	if err != nil {
-		return "", err
-	}
-	err = AuthenticateUser(user, password)
-	if err != nil {
-		return "", err
-	}
-
-	// Add token
-	user.Token = generateToken()
-	err = db.UpdateUser(user)
-	if err != nil {
-		return "", err
-	}
-
-	return user.Token, nil
-}
-
-func GetUserFromUsername(db types.GoBanksDataBase, username string) (types.User,
+func GetUserFromUsername(db dbt.GoBanksDataBase, username string,
+) (dbt.User,
 	error) {
 
 	// setting filters
-	var f types.UserFilters
+	var f dbt.UserFilters
 	f.Filters.Names = true
 	f.Values.Names = []string{username}
 
 	users, err := db.GetUsers(f)
 	if len(users) < 1 {
 		err = noUserFoundError{username: username}
-		return types.User{}, LoginError{err: err.Error(),
+		return dbt.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorNoUsername,
 		}
 	}
 	if len(users) >= 2 {
 		err = multipleUserFound{username: username}
-		return types.User{}, LoginError{err: err.Error(),
+		return dbt.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorMultipleUsername,
 		}
 	}
@@ -114,47 +80,84 @@ func GetUserFromUsername(db types.GoBanksDataBase, username string) (types.User,
 	return users[0], err
 }
 
-func GetUserFromToken(db types.GoBanksDataBase, token string) (types.User,
+func GetUserFromToken(db dbt.GoBanksDataBase, token string) (dbt.User,
 	error) {
 	// setting filters
-	var f types.UserFilters
+	var f dbt.UserFilters
 	f.Filters.Tokens = true
 	f.Values.Tokens = []string{token}
 
 	users, err := db.GetUsers(f)
 	if len(users) < 1 {
 		err = noUserFoundError{token: token}
-		return types.User{}, LoginError{err: err.Error(),
+		return dbt.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorNoToken,
 		}
 	}
 	if len(users) >= 2 {
 		err = multipleUserFound{token: token}
-		return types.User{}, LoginError{err: err.Error(),
+		return dbt.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorMultipleToken,
 		}
 	}
 	return users[0], err
 }
 
-func isUsernameTaken(db types.GoBanksDataBase, username string) (bool, error) {
+func newUser(username string, password string) (user dbt.User,
+	err error) {
+	byteSalt := make([]byte, 32)
+	_, err = io.ReadFull(rand.Reader, byteSalt)
+	var salt = string(byteSalt)
+	if err != nil {
+		return user, err
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(salt+password), 4)
+	if err != nil {
+		return user, err
+	}
+	user = dbt.User{
+		Name:         username,
+		PasswordHash: string(hash),
+		Salt:         salt,
+		Permanent:    true,
+	}
+	return user, nil
+}
+
+func authenticateUser(user dbt.User, password string) (err error) {
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash),
+		[]byte(user.Salt+password))
+	if err != nil {
+		return LoginError{err: err.Error(),
+			ErrorCode: LoginErrorWrongPassword}
+	}
+	return nil
+}
+
+// TODO look at JWT
+func generateToken() string {
+	return "aaaa"
+}
+
+func isUsernameTaken(db dbt.GoBanksDataBase, username string) (bool,
+	error) {
 	// setting filters
-	var f types.UserFilters
+	var f dbt.UserFilters
 	f.Filters.Names = true
 	f.Values.Names = []string{username}
 	return checkExists(db, f)
 }
 
-func isTokenTaken(db types.GoBanksDataBase, token string,
+func isTokenTaken(db dbt.GoBanksDataBase, token string,
 ) (bool, error) {
 	// setting filters
-	var f types.UserFilters
+	var f dbt.UserFilters
 	f.Filters.Tokens = true
 	f.Values.Tokens = []string{token}
 	return checkExists(db, f)
 }
 
-func checkExists(db types.GoBanksDataBase, f types.UserFilters,
+func checkExists(db dbt.GoBanksDataBase, f dbt.UserFilters,
 ) (bool, error) {
 	users, err := db.GetUsers(f)
 	if err != nil {

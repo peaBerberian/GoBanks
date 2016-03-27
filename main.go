@@ -9,7 +9,7 @@ import "github.com/peaberberian/GoBanks/database/types"
 // just for tests
 import "github.com/peaberberian/GoBanks/file/qif"
 
-import "github.com/peaberberian/GoBanks/login"
+// import "github.com/peaberberian/GoBanks/login"
 
 func main() {
 	conf, err := config.GetConfig()
