@@ -5,44 +5,6 @@ import "io"
 import "github.com/peaberberian/GoBanks/database/types"
 import "golang.org/x/crypto/bcrypt"
 
-type NoUserFoundError struct {
-	username string
-	token    string
-}
-
-type MultipleUserFound struct {
-	username string
-	token    string
-}
-
-type AlreadyCreatedUserError struct {
-	username string
-}
-
-func (err MultipleUserFound) Error() string {
-	if err.username != "" {
-		return "Multiple users found with that username: " + err.username
-	}
-	if err.token != "" {
-		return "Multiple users found with that token: " + err.token
-	}
-	return "Multiple users found"
-}
-
-func (err NoUserFoundError) Error() string {
-	if err.username != "" {
-		return "No user found with that username: " + err.username
-	}
-	if err.token != "" {
-		return "No user found with that token: " + err.token
-	}
-	return "No user found"
-}
-
-func (err AlreadyCreatedUserError) Error() string {
-	return "An user with that username already exists: " + err.username
-}
-
 func NewUser(username string, password string) (user types.User,
 	err error) {
 	byteSalt := make([]byte, 32)
@@ -65,8 +27,13 @@ func NewUser(username string, password string) (user types.User,
 }
 
 func AuthenticateUser(user types.User, password string) (err error) {
-	return bcrypt.CompareHashAndPassword([]byte(user.PasswordHash),
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash),
 		[]byte(user.Salt+password))
+	if err != nil {
+		return LoginError{err: err.Error(),
+			ErrorCode: LoginErrorWrongPassword}
+	}
+	return nil
 }
 
 func RegisterUser(db types.GoBanksDataBase, username string,
@@ -77,7 +44,9 @@ func RegisterUser(db types.GoBanksDataBase, username string,
 		return
 	}
 	if usernameTaken {
-		return types.User{}, AlreadyCreatedUserError{username}
+		err = alreadyCreatedUserError{username: username}
+		return types.User{}, LoginError{err: err.Error(),
+			ErrorCode: LoginErrorAlreadyTakenUsername}
 	}
 
 	user, err = NewUser(username, password)
@@ -130,10 +99,16 @@ func GetUserFromUsername(db types.GoBanksDataBase, username string) (types.User,
 
 	users, err := db.GetUsers(f)
 	if len(users) < 1 {
-		return types.User{}, NoUserFoundError{username: username}
+		err = noUserFoundError{username: username}
+		return types.User{}, LoginError{err: err.Error(),
+			ErrorCode: LoginErrorNoUsername,
+		}
 	}
 	if len(users) >= 2 {
-		return users[0], MultipleUserFound{username: username}
+		err = multipleUserFound{username: username}
+		return types.User{}, LoginError{err: err.Error(),
+			ErrorCode: LoginErrorMultipleUsername,
+		}
 	}
 
 	return users[0], err
@@ -148,10 +123,16 @@ func GetUserFromToken(db types.GoBanksDataBase, token string) (types.User,
 
 	users, err := db.GetUsers(f)
 	if len(users) < 1 {
-		return users[0], NoUserFoundError{token: token}
+		err = noUserFoundError{token: token}
+		return types.User{}, LoginError{err: err.Error(),
+			ErrorCode: LoginErrorNoToken,
+		}
 	}
 	if len(users) >= 2 {
-		return users[0], MultipleUserFound{token: token}
+		err = multipleUserFound{token: token}
+		return types.User{}, LoginError{err: err.Error(),
+			ErrorCode: LoginErrorMultipleToken,
+		}
 	}
 	return users[0], err
 }
