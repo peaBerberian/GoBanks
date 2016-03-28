@@ -4,9 +4,9 @@ import "crypto/rand"
 import "io"
 import "golang.org/x/crypto/bcrypt"
 
-import dbt "github.com/peaberberian/GoBanks/database/types"
+import def "github.com/peaberberian/GoBanks/database/definitions"
 
-func LoginUser(db dbt.GoBanksDataBase, username string,
+func LoginUser(db def.GoBanksDataBase, username string,
 	password string) (string, error) {
 
 	user, err := GetUserFromUsername(db, username)
@@ -28,8 +28,8 @@ func LoginUser(db dbt.GoBanksDataBase, username string,
 	return user.Token, nil
 }
 
-func RegisterUser(db dbt.GoBanksDataBase, username string,
-	password string) (user dbt.User, err error) {
+func RegisterUser(db def.GoBanksDataBase, username string,
+	password string) (user def.User, err error) {
 
 	usernameTaken, err := isUsernameTaken(db, username)
 	if err != nil {
@@ -37,7 +37,7 @@ func RegisterUser(db dbt.GoBanksDataBase, username string,
 	}
 	if usernameTaken {
 		err = alreadyCreatedUserError{username: username}
-		return dbt.User{}, LoginError{err: err.Error(),
+		return def.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorAlreadyTakenUsername}
 	}
 
@@ -54,25 +54,25 @@ func RegisterUser(db dbt.GoBanksDataBase, username string,
 	return
 }
 
-func GetUserFromUsername(db dbt.GoBanksDataBase, username string,
-) (dbt.User,
+func GetUserFromUsername(db def.GoBanksDataBase, username string,
+) (def.User,
 	error) {
 
 	// setting filters
-	var f dbt.UserFilters
+	var f def.UserFilters
 	f.Filters.Names = true
 	f.Values.Names = []string{username}
 
 	users, err := db.GetUsers(f)
 	if len(users) < 1 {
 		err = noUserFoundError{username: username}
-		return dbt.User{}, LoginError{err: err.Error(),
+		return def.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorNoUsername,
 		}
 	}
 	if len(users) >= 2 {
 		err = multipleUserFound{username: username}
-		return dbt.User{}, LoginError{err: err.Error(),
+		return def.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorMultipleUsername,
 		}
 	}
@@ -80,30 +80,30 @@ func GetUserFromUsername(db dbt.GoBanksDataBase, username string,
 	return users[0], err
 }
 
-func GetUserFromToken(db dbt.GoBanksDataBase, token string) (dbt.User,
+func GetUserFromToken(db def.GoBanksDataBase, token string) (def.User,
 	error) {
 	// setting filters
-	var f dbt.UserFilters
+	var f def.UserFilters
 	f.Filters.Tokens = true
 	f.Values.Tokens = []string{token}
 
 	users, err := db.GetUsers(f)
 	if len(users) < 1 {
 		err = noUserFoundError{token: token}
-		return dbt.User{}, LoginError{err: err.Error(),
+		return def.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorNoToken,
 		}
 	}
 	if len(users) >= 2 {
 		err = multipleUserFound{token: token}
-		return dbt.User{}, LoginError{err: err.Error(),
+		return def.User{}, LoginError{err: err.Error(),
 			ErrorCode: LoginErrorMultipleToken,
 		}
 	}
 	return users[0], err
 }
 
-func newUser(username string, password string) (user dbt.User,
+func newUser(username string, password string) (user def.User,
 	err error) {
 	byteSalt := make([]byte, 32)
 	_, err = io.ReadFull(rand.Reader, byteSalt)
@@ -115,7 +115,7 @@ func newUser(username string, password string) (user dbt.User,
 	if err != nil {
 		return user, err
 	}
-	user = dbt.User{
+	user = def.User{
 		Name:         username,
 		PasswordHash: string(hash),
 		Salt:         salt,
@@ -124,7 +124,7 @@ func newUser(username string, password string) (user dbt.User,
 	return user, nil
 }
 
-func authenticateUser(user dbt.User, password string) (err error) {
+func authenticateUser(user def.User, password string) (err error) {
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash),
 		[]byte(user.Salt+password))
 	if err != nil {
@@ -139,25 +139,25 @@ func generateToken() string {
 	return "aaaa"
 }
 
-func isUsernameTaken(db dbt.GoBanksDataBase, username string) (bool,
+func isUsernameTaken(db def.GoBanksDataBase, username string) (bool,
 	error) {
 	// setting filters
-	var f dbt.UserFilters
+	var f def.UserFilters
 	f.Filters.Names = true
 	f.Values.Names = []string{username}
 	return checkExists(db, f)
 }
 
-func isTokenTaken(db dbt.GoBanksDataBase, token string,
+func isTokenTaken(db def.GoBanksDataBase, token string,
 ) (bool, error) {
 	// setting filters
-	var f dbt.UserFilters
+	var f def.UserFilters
 	f.Filters.Tokens = true
 	f.Values.Tokens = []string{token}
 	return checkExists(db, f)
 }
 
-func checkExists(db dbt.GoBanksDataBase, f dbt.UserFilters,
+func checkExists(db def.GoBanksDataBase, f def.UserFilters,
 ) (bool, error) {
 	users, err := db.GetUsers(f)
 	if err != nil {

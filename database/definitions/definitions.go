@@ -1,4 +1,4 @@
-package types
+package definitions
 
 import "time"
 
@@ -26,7 +26,7 @@ type GoBanksDataBase interface {
 	// Get multiple users, based on filters
 	GetUsers(UserFilters) ([]User, error)
 
-	// Add a single
+	// Add a single bank
 	// Returns bank's DbId / possible error
 	AddBank(Bank) (int, error)
 
@@ -107,6 +107,20 @@ type UserFilters struct {
 		Names     []string
 		Tokens    []string
 		Permanent bool
+	}
+}
+
+// TODO To implement
+type TransactionCategoryFilter struct {
+	Filters struct {
+		Names  bool
+		Users  bool
+		Parent bool
+	}
+	Values struct {
+		Names  []string
+		Users  []int
+		Parent []int
 	}
 }
 
@@ -216,20 +230,40 @@ type Bank struct {
 	Description string
 }
 
+// TODO To implement
+type TransactionCategory struct {
+	// Id of the category in the database
+	// Set by the database's methods.
+	// (starts at 1, 0 if not added to the database)
+	DbId int
+
+	// User linked to this category
+	LinkedUserDbId int
+
+	// Name of the category
+	Name string
+
+	// Optional description
+	Description string
+
+	// Id of the parent category
+	// 0 if none
+	ParentDbId int
+}
+
 type BankAccount struct {
 	// Id of the bank account in the database
 	// Set by the database's methods.
 	// (starts at 1, 0 if not added to the database)
 	DbId int
 
-	// TODO
 	// Bank DbId linked to this account
 	LinkedBankDbId int
 
 	// Name of the bank account
 	Name string
 
-	// Amount of money used as a base. (Not all transactions may be
+	// Amount of money used as a base. (Not all transactions on it may be
 	// available, we have to set the base to circumvent this)
 	BaseAmount float32
 

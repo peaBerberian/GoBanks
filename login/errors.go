@@ -29,7 +29,7 @@ const (
 type LoginError struct {
 	err string
 
-	// Error codes. See constants.
+	// Error code. See constants.
 	ErrorCode uint32
 }
 

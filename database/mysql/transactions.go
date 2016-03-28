@@ -3,112 +3,185 @@ package mysql
 import "database/sql"
 import "errors"
 
-import dbt "github.com/peaberberian/GoBanks/database/types"
+import def "github.com/peaberberian/GoBanks/database/definitions"
 
-func (gbs *GoBanksSql) AddTransaction(transac dbt.Transaction) (id int,
+const TRANSACTION_TABLE = "transaction"
+
+var TRANSACTION_FIELDS = []string{"account_id", "label", "debit", "credit",
+	"date_of_transaction", "date_of_record"}
+
+func (gbs *goBanksSql) AddTransaction(trns def.Transaction) (id int,
 	err error) {
-	if transac.LinkedAccountDbId == 0 {
+	if trns.LinkedAccountDbId == 0 {
 		return 0, errors.New("The linked account must be added to the" +
 			" database before the transaction.")
 	}
-	var res sql.Result
 
-	gbs.mutex.Lock()
-	res, err = gbs.db.Exec("insert into transaction "+
-		"(account_id, label, debit, credit, date_of_transaction,"+
-		" date_of_record) "+
-		"values (?, ?, ?, ?, ?, ?)",
-		transac.LinkedAccountDbId,
-		transac.Label,
-		transac.Debit,
-		transac.Credit,
-		transac.TransactionDate,
-		transac.RecordDate)
-	gbs.mutex.Unlock()
+	values := make([]interface{}, 0)
+	values = append(values, trns.LinkedAccountDbId, trns.Label,
+		trns.Debit, trns.Credit, trns.TransactionDate, trns.RecordDate)
 
+	id, err = gbs.insertInTable(TRANSACTION_TABLE, TRANSACTION_FIELDS, values)
 	if err != nil {
 		return 0, err
 	}
-	var id64 int64
-	id64, err = res.LastInsertId()
-	id = int(id64)
-	transac.DbId = id
+	trns.DbId = id
 	return
 }
 
-func (gbs *GoBanksSql) RemoveTransaction(transacId int) (err error) {
-	gbs.mutex.Lock()
-	_, err = gbs.db.Exec("DELETE FROM transaction "+
-		"WHERE id=?", transacId)
-	gbs.mutex.Unlock()
-
-	return
+func (gbs *goBanksSql) RemoveTransaction(id int) (err error) {
+	return gbs.removeIdFromTable(TRANSACTION_TABLE, id)
 }
 
-func (gbs *GoBanksSql) UpdateTransaction(transac dbt.Transaction,
+func (gbs *goBanksSql) UpdateTransaction(trns def.Transaction,
 ) (err error) {
-	gbs.mutex.Lock()
-	_, err = gbs.db.Exec("UPDATE transaction "+
-		"SET account_id=?, label=?, debit=?, credit=?,"+
-		" date_of_transaction=?, date_of_record=? "+
-		"WHERE id=?",
-		transac.LinkedAccountDbId,
-		transac.Label,
-		transac.Debit,
-		transac.Credit,
-		transac.TransactionDate,
-		transac.RecordDate,
-		transac.DbId,
-	)
-	gbs.mutex.Unlock()
+	values := make([]interface{}, 0)
+	values = append(values, trns.LinkedAccountDbId, trns.Label,
+		trns.Debit, trns.Credit, trns.TransactionDate, trns.RecordDate)
 
-	if err != nil {
-		return
-	}
-	return nil
+	return gbs.updateInTableFromId(TRANSACTION_TABLE, trns.DbId,
+		TRANSACTION_FIELDS, values)
 }
 
-func (gbs *GoBanksSql) GetTransaction(transacId int) (t dbt.Transaction,
+func (gbs *goBanksSql) GetTransaction(id int) (t def.Transaction,
 	err error) {
-	gbs.mutex.Lock()
-	row := gbs.db.QueryRow("select account_id, label, debit, credit,"+
-		" date_of_transaction, date_of_record from transaction where id=?",
-		transacId)
-	gbs.mutex.Unlock()
-
-	t.DbId = transacId
+	row := gbs.getFromTable(TRANSACTION_TABLE, id, TRANSACTION_FIELDS)
+	t.DbId = id
 	err = row.Scan(&t.LinkedAccountDbId, &t.Label, &t.Debit, &t.Credit,
 		&t.TransactionDate, &t.RecordDate)
-
-	if err != nil {
-		return dbt.Transaction{}, err
-	}
 	return
 }
 
-// TODO
-func (gbs *GoBanksSql) GetTransactions(filters dbt.TransactionFilters,
-) (ts []dbt.Transaction, err error) {
+// TODO search from string (last 3 filters)
+func (gbs *goBanksSql) GetTransactions(f def.TransactionFilters,
+) (ts []def.Transaction, err error) {
+	var queryString string
+	var selectString = "select id, account_id, label, debit, credit," +
+		" date_of_transaction, date_of_record from " + TRANSACTION_TABLE + " "
+	var whereString = "WHERE "
+	var atLeastOneFilter = false
+	var sqlArguments = make([]interface{}, 0)
+
+	if f.Filters.Types {
+		if len(f.Values.Types) > 0 {
+			str, arg := addSqlFilterStringArray("name", f.Values.Types...)
+			whereString += str + " "
+			sqlArguments = append(sqlArguments, arg...)
+			atLeastOneFilter = true
+		} else {
+			return ts, nil
+		}
+	}
+	if f.Filters.Accounts {
+		if len(f.Values.Accounts) > 0 {
+			if atLeastOneFilter {
+				whereString += "AND "
+			}
+			addSqlFilterIntArray("account", f.Values.Accounts...)
+			atLeastOneFilter = true
+		} else {
+			return ts, nil
+		}
+	}
+
+	// Now that's what I call ugly! vol. 74
+	// Ugly but nice though...
+
+	if f.Filters.FromTransactionDate {
+		if atLeastOneFilter {
+			whereString += "AND "
+		}
+		whereString += "date_of_transaction >= ? "
+		sqlArguments = append(sqlArguments, f.Values.FromTransactionDate)
+		atLeastOneFilter = true
+	}
+
+	if f.Filters.ToTransactionDate {
+		if atLeastOneFilter {
+			whereString += "AND "
+		}
+		whereString += "date_of_transaction <= ? "
+		sqlArguments = append(sqlArguments, f.Values.ToTransactionDate)
+		atLeastOneFilter = true
+	}
+
+	if f.Filters.FromRecordDate {
+		if atLeastOneFilter {
+			whereString += "AND "
+		}
+		whereString += "date_of_record >= ? "
+		sqlArguments = append(sqlArguments, f.Values.FromRecordDate)
+		atLeastOneFilter = true
+	}
+
+	if f.Filters.ToRecordDate {
+		if atLeastOneFilter {
+			whereString += "AND "
+		}
+		whereString += "date_of_record < ? "
+		sqlArguments = append(sqlArguments, f.Values.ToRecordDate)
+		atLeastOneFilter = true
+	}
+
+	if f.Filters.MinDebit {
+		if atLeastOneFilter {
+			whereString += "AND "
+		}
+		whereString += "debit >= ? "
+		sqlArguments = append(sqlArguments, f.Values.MinDebit)
+		atLeastOneFilter = true
+	}
+
+	if f.Filters.MaxDebit {
+		if atLeastOneFilter {
+			whereString += "AND "
+		}
+		whereString += "debit <= ? "
+		sqlArguments = append(sqlArguments, f.Values.MaxDebit)
+		atLeastOneFilter = true
+	}
+
+	if f.Filters.MinCredit {
+		if atLeastOneFilter {
+			whereString += "AND "
+		}
+		whereString += "credit >= ? "
+		sqlArguments = append(sqlArguments, f.Values.MinCredit)
+		atLeastOneFilter = true
+	}
+
+	if f.Filters.MaxCredit {
+		if atLeastOneFilter {
+			whereString += "AND "
+		}
+		whereString += "credit <= ? "
+		sqlArguments = append(sqlArguments, f.Values.MaxCredit)
+		atLeastOneFilter = true
+	}
+
+	if atLeastOneFilter {
+		queryString = selectString + whereString
+	} else {
+		queryString = selectString
+	}
+
 	gbs.mutex.Lock()
 	var rows = new(sql.Rows)
-	rows, err = gbs.db.Query("select id, account_id, label, debit, credit,"+
-		" date_of_transaction, date_of_record from transaction"+
-		" WHERE account_id=?",
-		filters.Values.Accounts[0])
+	rows, err = gbs.db.Query(queryString, sqlArguments...)
 	gbs.mutex.Unlock()
 
 	if err != nil {
-		return []dbt.Transaction{}, err
+		return ts, err
 	}
 
 	for rows.Next() {
-		var t dbt.Transaction
-		err = rows.Scan(&t.DbId, &t.LinkedAccountDbId, &t.Label, &t.Debit,
-			&t.Credit, &t.TransactionDate, &t.RecordDate)
+		var trn def.Transaction
+		err = rows.Scan(&trn.DbId, &trn.LinkedAccountDbId, &trn.Label,
+			&trn.Debit, &trn.Credit, &trn.TransactionDate, &trn.RecordDate)
 		if err != nil {
 			return
 		}
-		ts = append(ts, t)
+		ts = append(ts, trn)
 	}
 
 	return
