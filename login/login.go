@@ -6,6 +6,8 @@ import "golang.org/x/crypto/bcrypt"
 
 import def "github.com/peaberberian/GoBanks/database/definitions"
 
+// import jwt "github.com/dgrijalva/jwt-go"
+
 func LoginUser(db def.GoBanksDataBase, username string,
 	password string) (string, error) {
 
@@ -102,6 +104,15 @@ func GetUserFromToken(db def.GoBanksDataBase, token string) (def.User,
 	}
 	return users[0], err
 }
+
+// func VerifyToken(tokenString string) (err error) {
+// 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+// 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+// 			return nil, nil
+// 		}
+// 	})
+// 	return
+// }
 
 func newUser(username string, password string) (user def.User,
 	err error) {

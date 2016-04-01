@@ -23,6 +23,10 @@ const (
 
 	// Multiple users found with the given token
 	LoginErrorMultipleToken
+
+	ExpiredTokenError
+
+	InvalidTokenError
 )
 
 // Errors happening on login (not from database/crypting errors)
@@ -39,6 +43,18 @@ func (lerr LoginError) Error() string {
 		return lerr.err
 	}
 	return "Login failed"
+}
+
+type expiredTokenError struct{}
+
+func (err expiredTokenError) Error() string {
+	return "Your token has expired"
+}
+
+type invalidTokenError struct{}
+
+func (err invalidTokenError) Error() string {
+	return "Your token is invalid"
 }
 
 type noUserFoundError struct {
