@@ -5,9 +5,11 @@ import "github.com/peaberberian/GoBanks/database"
 
 // used for tests
 import "fmt"
-import def "github.com/peaberberian/GoBanks/database/definitions"
+import "github.com/peaberberian/GoBanks/login"
 
-// import "github.com/peaberberian/GoBanks/login"
+// TODO Read config here and setup db choice etc. from here
+func init() {
+}
 
 func main() {
 	conf, err := config.GetConfig()
@@ -21,15 +23,10 @@ func main() {
 		panic(err)
 	}
 
-	var f def.TransactionFilters
-	f.Filters.MinCredit = true
-	f.Values.MinCredit = 1000
-	// f.Filters.MinDebit = true
-	// f.Values.MinDebit = -12
+	token, err := login.CreateToken("oscarito", db)
+	fmt.Println("token: ", token, err)
+	myToken, err := login.ParseToken(token)
+	fmt.Println("token: ", myToken, err)
 
-	debs, err := db.GetTransactions(f)
-	// random tests
-	// usr, err := login.LoginUser(db, "abraham", "Simpson")
-	fmt.Println(debs, err)
 	defer db.Close()
 }

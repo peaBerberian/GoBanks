@@ -73,7 +73,9 @@ func (gbs *goBanksSql) GetBankAccounts(f def.BankAccountFilters,
 			if atLeastOneFilter {
 				whereString += "AND "
 			}
-			addSqlFilterIntArray("token", f.Values.Banks...)
+			str, arg := addSqlFilterIntArray("bank_id", f.Values.Banks...)
+			whereString += str + " "
+			sqlArguments = append(sqlArguments, arg...)
 			atLeastOneFilter = true
 		} else {
 			return

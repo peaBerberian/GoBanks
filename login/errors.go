@@ -18,18 +18,30 @@ const (
 	// Trying to authenticate but the wrong password was given
 	LoginErrorWrongPassword
 
-	// No user found with the given token
-	LoginErrorNoToken
-
-	// Multiple users found with the given token
-	LoginErrorMultipleToken
-
+	// The given token has expired, you should request a new one
 	ExpiredTokenError
 
+	// The JWT is not valid (modified by the user?)
 	InvalidTokenError
+
+	// The signing method for the token was not the one expected (modified?)
+	InvalidTokenSigningMethodError
+
+	// The JWT cannot be parsed
+	UnreadableTokenError
+
+	// The signing for the token provoked an error.
+	TokenSigningError
+
+	// The used signing key is invalid and could not be corrected. Used as a
+	// security measure, this error will not appear unless the code has been
+	// wrongly modified to a point where we cannot guarantee the security
+	// of our tokens
+	InvalidSigningKeyError
 )
 
-// Errors happening on login (not from database/crypting errors)
+// LoginError defines Errors happening on login (not from database/crypting
+// errors)
 type LoginError struct {
 	err string
 
@@ -37,7 +49,6 @@ type LoginError struct {
 	ErrorCode uint32
 }
 
-// Error generate a readable error string for a LoginError
 func (lerr LoginError) Error() string {
 	if lerr.err != "" {
 		return lerr.err
@@ -47,36 +58,53 @@ func (lerr LoginError) Error() string {
 
 type expiredTokenError struct{}
 
-func (err expiredTokenError) Error() string {
-	return "Your token has expired"
+type invalidTokenSigningMethodError struct {
+	alg string
+}
+
+type unreadableTokenError struct {
+	field string
 }
 
 type invalidTokenError struct{}
 
-func (err invalidTokenError) Error() string {
-	return "Your token is invalid"
-}
-
 type noUserFoundError struct {
 	username string
-	token    string
 }
 
 type multipleUserFound struct {
 	username string
-	token    string
 }
 
 type alreadyCreatedUserError struct {
 	username string
 }
 
+func (err expiredTokenError) Error() string {
+	return "This token has expired"
+}
+
+func (err invalidTokenSigningMethodError) Error() string {
+	if err.alg != "" {
+		return "Unexpected signing method: " + err.alg
+	}
+	return "This token has not the right signing method"
+}
+
+func (err unreadableTokenError) Error() string {
+	if err.field != "" {
+		return "The following field could not be parsed: " + err.field
+	}
+	return "This token could not be parsed"
+}
+
+func (err invalidTokenError) Error() string {
+	return "This token is invalid"
+}
+
 func (err multipleUserFound) Error() string {
 	if err.username != "" {
 		return "Multiple users found with that username: " + err.username
-	}
-	if err.token != "" {
-		return "Multiple users found with that token: " + err.token
 	}
 	return "Multiple users found"
 }
@@ -84,9 +112,6 @@ func (err multipleUserFound) Error() string {
 func (err noUserFoundError) Error() string {
 	if err.username != "" {
 		return "No user found with that username: " + err.username
-	}
-	if err.token != "" {
-		return "No user found with that token: " + err.token
 	}
 	return "No user found"
 }

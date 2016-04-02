@@ -62,7 +62,7 @@ func (gbs *goBanksSql) GetBanks(f def.BankFilters) (bs []def.Bank,
 			sqlArguments = append(sqlArguments, arg...)
 			atLeastOneFilter = true
 		} else {
-			return bs, nil
+			return []def.Bank{}, nil
 		}
 	}
 	if f.Filters.Users {
@@ -70,10 +70,12 @@ func (gbs *goBanksSql) GetBanks(f def.BankFilters) (bs []def.Bank,
 			if atLeastOneFilter {
 				whereString += "AND "
 			}
-			addSqlFilterIntArray("token", f.Values.Users...)
+			str, arg := addSqlFilterIntArray("user_id", f.Values.Users...)
+			whereString += str + " "
+			sqlArguments = append(sqlArguments, arg...)
 			atLeastOneFilter = true
 		} else {
-			return bs, nil
+			return []def.Bank{}, nil
 		}
 	}
 
@@ -89,7 +91,7 @@ func (gbs *goBanksSql) GetBanks(f def.BankFilters) (bs []def.Bank,
 	gbs.mutex.Unlock()
 
 	if err != nil {
-		return bs, err
+		return []def.Bank{}, err
 	}
 
 	for rows.Next() {

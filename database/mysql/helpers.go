@@ -135,8 +135,9 @@ func addSqlFilterIntArray(fieldName string,
 }
 
 // see addSqlFilterArray
-func addSqlFilterStringArray(fieldName string, elems ...string,
-) (fstring string, farg []interface{}) {
+func addSqlFilterStringArray(fieldName string,
+	elems ...string) (fstring string, farg []interface{}) {
+
 	var len = len(elems)
 	fstring += "( "
 	for i, name := range elems {
@@ -147,5 +148,5 @@ func addSqlFilterStringArray(fieldName string, elems ...string,
 		}
 	}
 	fstring += ")"
-	return
+	return fstring, farg
 }

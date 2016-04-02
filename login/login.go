@@ -6,32 +6,29 @@ import "golang.org/x/crypto/bcrypt"
 
 import def "github.com/peaberberian/GoBanks/database/definitions"
 
-// import jwt "github.com/dgrijalva/jwt-go"
+func init() {
+	_ = generateSigningKey()
+}
 
+// LoginUser verifies the password for the given username and returns
+// an error if the password is wrong / the user does not exists / other
+// database errors
 func LoginUser(db def.GoBanksDataBase, username string,
-	password string) (string, error) {
+	password string) error {
 
 	user, err := GetUserFromUsername(db, username)
 	if err != nil {
-		return "", err
+		return err
 	}
 	err = authenticateUser(user, password)
-	if err != nil {
-		return "", err
-	}
-
-	// Add token TODO look at JWT
-	user.Token = generateToken()
-	err = db.UpdateUser(user)
-	if err != nil {
-		return "", err
-	}
-
-	return user.Token, nil
+	return err
 }
 
+// RegisterUser adds a new user in the database with the given username
+// and password. An administrator boolean indicates if the user is an
+// administrator (more rights)
 func RegisterUser(db def.GoBanksDataBase, username string,
-	password string) (user def.User, err error) {
+	password string, administrator bool) (user def.User, err error) {
 
 	usernameTaken, err := isUsernameTaken(db, username)
 	if err != nil {
@@ -43,7 +40,7 @@ func RegisterUser(db def.GoBanksDataBase, username string,
 			ErrorCode: LoginErrorAlreadyTakenUsername}
 	}
 
-	user, err = newUser(username, password)
+	user, err = newUser(username, password, administrator)
 	if err != nil {
 		return
 	}
@@ -56,9 +53,12 @@ func RegisterUser(db def.GoBanksDataBase, username string,
 	return
 }
 
+// GetUserFromUsername returns the corresponding User struct for a given
+// username.
+// It returns an error if no or multiple users were found with that
+// username or for a database error.
 func GetUserFromUsername(db def.GoBanksDataBase, username string,
-) (def.User,
-	error) {
+) (def.User, error) {
 
 	// setting filters
 	var f def.UserFilters
@@ -82,43 +82,19 @@ func GetUserFromUsername(db def.GoBanksDataBase, username string,
 	return users[0], err
 }
 
-func GetUserFromToken(db def.GoBanksDataBase, token string) (def.User,
-	error) {
-	// setting filters
-	var f def.UserFilters
-	f.Filters.Tokens = true
-	f.Values.Tokens = []string{token}
-
-	users, err := db.GetUsers(f)
-	if len(users) < 1 {
-		err = noUserFoundError{token: token}
-		return def.User{}, LoginError{err: err.Error(),
-			ErrorCode: LoginErrorNoToken,
-		}
+func generateRandomKey(size int) (salt string, err error) {
+	byteSalt := make([]byte, size)
+	_, err = io.ReadFull(rand.Reader, byteSalt)
+	if err != nil {
+		return
 	}
-	if len(users) >= 2 {
-		err = multipleUserFound{token: token}
-		return def.User{}, LoginError{err: err.Error(),
-			ErrorCode: LoginErrorMultipleToken,
-		}
-	}
-	return users[0], err
+	salt = string(byteSalt)
+	return salt, nil
 }
 
-// func VerifyToken(tokenString string) (err error) {
-// 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-// 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-// 			return nil, nil
-// 		}
-// 	})
-// 	return
-// }
-
-func newUser(username string, password string) (user def.User,
-	err error) {
-	byteSalt := make([]byte, 32)
-	_, err = io.ReadFull(rand.Reader, byteSalt)
-	var salt = string(byteSalt)
+func newUser(username string, password string, administrator bool,
+) (user def.User, err error) {
+	salt, err := generateRandomKey(32)
 	if err != nil {
 		return user, err
 	}
@@ -127,10 +103,10 @@ func newUser(username string, password string) (user def.User,
 		return user, err
 	}
 	user = def.User{
-		Name:         username,
-		PasswordHash: string(hash),
-		Salt:         salt,
-		Permanent:    true,
+		Name:          username,
+		PasswordHash:  string(hash),
+		Salt:          salt,
+		Administrator: administrator,
 	}
 	return user, nil
 }
@@ -145,26 +121,12 @@ func authenticateUser(user def.User, password string) (err error) {
 	return nil
 }
 
-// TODO look at JWT
-func generateToken() string {
-	return "aaaa"
-}
-
 func isUsernameTaken(db def.GoBanksDataBase, username string) (bool,
 	error) {
 	// setting filters
 	var f def.UserFilters
 	f.Filters.Names = true
 	f.Values.Names = []string{username}
-	return checkExists(db, f)
-}
-
-func isTokenTaken(db def.GoBanksDataBase, token string,
-) (bool, error) {
-	// setting filters
-	var f def.UserFilters
-	f.Filters.Tokens = true
-	f.Values.Tokens = []string{token}
 	return checkExists(db, f)
 }
 

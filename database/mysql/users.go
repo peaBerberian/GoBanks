@@ -6,7 +6,7 @@ import def "github.com/peaberberian/GoBanks/database/definitions"
 
 const USER_TABLE = "user"
 
-var USER_FIELDS = []string{"name", "password", "salt", "permanent"}
+var USER_FIELDS = []string{"name", "password", "salt", "admin"}
 
 func (gbs *goBanksSql) UserLength() (len int, err error) {
 	gbs.mutex.Lock()
@@ -22,7 +22,7 @@ func (gbs *goBanksSql) UserLength() (len int, err error) {
 func (gbs *goBanksSql) AddUser(user def.User) (id int, err error) {
 	values := make([]interface{}, 0)
 	values = append(values, user.Name, user.PasswordHash,
-		user.Salt, user.Permanent)
+		user.Salt, user.Administrator)
 
 	id, err = gbs.insertInTable(TRANSACTION_TABLE, TRANSACTION_FIELDS, values)
 	if err != nil {
@@ -39,7 +39,7 @@ func (gbs *goBanksSql) RemoveUser(id int) (err error) {
 func (gbs *goBanksSql) UpdateUser(user def.User) (err error) {
 	values := make([]interface{}, 0)
 	values = append(values, user.Name, user.PasswordHash,
-		user.Salt, user.Permanent)
+		user.Salt, user.Administrator)
 
 	return gbs.updateInTableFromId(USER_TABLE, user.DbId,
 		USER_FIELDS, values)
@@ -48,7 +48,7 @@ func (gbs *goBanksSql) UpdateUser(user def.User) (err error) {
 func (gbs *goBanksSql) GetUser(id int) (t def.User, err error) {
 	row := gbs.getFromTable(USER_TABLE, id, USER_FIELDS)
 	t.DbId = id
-	err = row.Scan(&t.Name, &t.PasswordHash, &t.Salt, &t.Permanent)
+	err = row.Scan(&t.Name, &t.PasswordHash, &t.Salt, &t.Administrator)
 	return
 }
 
@@ -56,7 +56,8 @@ func (gbs *goBanksSql) GetUsers(f def.UserFilters,
 ) (usrs []def.User, err error) {
 
 	var queryString string
-	var selectString = "select id, name, password, salt, permanent from user "
+	var selectString = "select id, name, password, salt, administrator" +
+		" from user "
 	var whereString = "WHERE "
 	var atLeastOneFilter = false
 	var sqlArguments = make([]interface{}, 0)
@@ -71,23 +72,12 @@ func (gbs *goBanksSql) GetUsers(f def.UserFilters,
 			return usrs, nil
 		}
 	}
-	if f.Filters.Tokens {
-		if len(f.Values.Tokens) > 0 {
-			if atLeastOneFilter {
-				whereString += "AND "
-			}
-			addSqlFilterStringArray("token", f.Values.Tokens...)
-			atLeastOneFilter = true
-		} else {
-			return usrs, nil
-		}
-	}
-	if f.Filters.Permanent {
+	if f.Filters.Administrator {
 		if atLeastOneFilter {
 			whereString += "AND "
 		}
-		whereString += "permanent=? "
-		sqlArguments = append(sqlArguments, f.Values.Permanent)
+		whereString += "administrator=? "
+		sqlArguments = append(sqlArguments, f.Values.Administrator)
 		atLeastOneFilter = true
 	}
 
@@ -109,7 +99,7 @@ func (gbs *goBanksSql) GetUsers(f def.UserFilters,
 	for rows.Next() {
 		var usr def.User
 		err = rows.Scan(&usr.DbId, &usr.Name, &usr.PasswordHash, &usr.Salt,
-			&usr.Permanent)
+			&usr.Administrator)
 		if err != nil {
 			return
 		}

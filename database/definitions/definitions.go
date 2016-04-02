@@ -99,14 +99,12 @@ type BankFilters struct {
 
 type UserFilters struct {
 	Filters struct {
-		Names     bool
-		Tokens    bool
-		Permanent bool
+		Names         bool
+		Administrator bool
 	}
 	Values struct {
-		Names     []string
-		Tokens    []string
-		Permanent bool
+		Names         []string
+		Administrator bool
 	}
 }
 
@@ -206,11 +204,8 @@ type User struct {
 	// Password's salt
 	Salt string
 
-	// User's current token
-	Token string
-
-	// True if the user is a permanent one
-	Permanent bool
+	// True if the user is an administrator
+	Administrator bool
 }
 
 type Bank struct {
