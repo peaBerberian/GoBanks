@@ -7,20 +7,14 @@ const CONFIG_FILE_PATH = "./config/config.json"
 
 // Exact structure of the config.json file
 type configFile struct {
-	Databases DatabasesConfig `json:"databases"`
+	// Databases map[string]interface{} `json:"databases"`
+	Databases       DatabasesConfig
+	TokenExpiration int `json:"jwtExpirationOffset"`
 }
 
 type DatabasesConfig struct {
-	DatabaseType string `json:"databaseType"`
-	MySql        struct {
-		User     string `json:"user"`
-		Password string `json:"password"`
-		Access   string `json:"access"`
-		Database string `json:"database"`
-	} `json:"mySql"`
-	File struct {
-		Path string `json:"path"`
-	} `json:"file"`
+	Type   string      `json:"type"`
+	Config interface{} `json:"config"`
 }
 
 // Returns map of current config file

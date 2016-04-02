@@ -2,23 +2,35 @@ package main
 
 import "github.com/peaberberian/GoBanks/config"
 import "github.com/peaberberian/GoBanks/database"
+import "github.com/peaberberian/GoBanks/login"
 
 // used for tests
 import "fmt"
-import "github.com/peaberberian/GoBanks/login"
 
-// TODO Read config here and setup db choice etc. from here
+// set configuration before starting
 func init() {
-}
-
-func main() {
 	conf, err := config.GetConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	// Create global database object
-	db, err := database.New(conf.Databases)
+	var typ = conf.Databases.Type
+	if val, ok := conf.Databases.Config.(map[string]interface{}); ok {
+		err = database.Set(typ, val[typ])
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		panic("The configuration file is not valid" +
+			"(The database configuration could not be understood).")
+	}
+
+	login.SetTokenExpiration(conf.TokenExpiration)
+}
+
+// create database and launch the application
+func main() {
+	db, err := database.New()
 	if err != nil {
 		panic(err)
 	}

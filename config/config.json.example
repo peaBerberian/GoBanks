@@ -1,11 +1,14 @@
 {
+  "jwtExpirationOffset": 2,
   "databases": {
-    "databaseType": "mySql|(file|mongoDB coming soon)",
-    "mySql": {
-      "user": "myUsername",
-      "password": "myPassword",
-      "access": "myUrl",
-      "database": "myDatabaseName"
+    "type": "mySql",
+    "config": {
+      "mySql": {
+        "user": "username",
+        "password": "pass",
+        "access": "tcp(myurl:myPort)",
+        "database": "GoBanks"
+      }
     }
   }
 }

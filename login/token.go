@@ -7,6 +7,8 @@ import def "github.com/peaberberian/GoBanks/database/definitions"
 
 import jwt "github.com/dgrijalva/jwt-go"
 
+var jwtExpiration int = 1
+
 // Representation of the principal attributes of our json web token
 type UserToken struct {
 	ExpirationDate  time.Time
@@ -17,6 +19,14 @@ type UserToken struct {
 }
 
 var tokenSigningKey string
+
+func SetTokenExpiration(exp int) {
+	jwtExpiration = exp
+}
+
+func GetTokenExpiration() int {
+	return jwtExpiration
+}
 
 // CreateToken creates a new token string for a specific user.
 // Returns an error if a problem with the databases was encountered or if
@@ -40,8 +50,10 @@ func CreateToken(username string, db def.GoBanksDataBase,
 		return "", err
 	}
 
+	var dur = time.Hour * time.Duration(jwtExpiration)
+
 	jwToken := jwt.New(jwt.SigningMethodHS256)
-	jwToken.Claims["exp"] = time.Now().Add(time.Hour).Unix()
+	jwToken.Claims["exp"] = time.Now().Add(dur).Unix()
 	jwToken.Claims["uid"] = user.DbId
 	jwToken.Claims["acc"] = accs
 	jwToken.Claims["bnk"] = bnks
