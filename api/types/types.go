@@ -1,4 +1,4 @@
-package apiTypes
+package types
 
 // used on json.marshall for constructing the API response
 type BankJSON struct {
