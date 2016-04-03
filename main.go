@@ -7,6 +7,12 @@ import "github.com/peaberberian/GoBanks/login"
 // used for tests
 import "fmt"
 
+// TODO move that
+type GoBanksError interface {
+	error
+	ErrorCode() uint32
+}
+
 // set configuration before starting
 func init() {
 	conf, err := config.GetConfig()

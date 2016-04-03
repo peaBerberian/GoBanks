@@ -46,7 +46,11 @@ type LoginError struct {
 	err string
 
 	// Error code. See constants.
-	ErrorCode uint32
+	code uint32
+}
+
+func (lerr LoginError) ErrorCode() uint32 {
+	return lerr.code
 }
 
 func (lerr LoginError) Error() string {

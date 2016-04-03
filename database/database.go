@@ -13,12 +13,17 @@ var dbConf databaseConfiguration
 // New creates a new database with the configuration given in the Set
 // function.
 func New() (gdb def.GoBanksDataBase, err error) {
+	if dbConf.name == "" {
+		return gdb, DatabaseError{err: "Database is not yet configured. " +
+			"Please call the Set method.", code: DatabaseConfigurationError}
+	}
+
 	switch dbConf.name {
 	case "mySql":
 		return newMysql()
 	default:
 		var err = DatabaseError{err: "Can't manage a(n) " + dbConf.name +
-			" database.", ErrorCode: DatabaseConfigurationError}
+			" database.", code: DatabaseConfigurationError}
 		return gdb, err
 	}
 	return
@@ -38,7 +43,7 @@ func Set(typ string, config interface{}) error {
 		dbConf.config = val
 	} else {
 		var err = DatabaseError{err: "Wrong database configuration.",
-			ErrorCode: DatabaseConfigurationError}
+			code: DatabaseConfigurationError}
 		return err
 	}
 	return nil
@@ -55,12 +60,12 @@ func newMysql() (gdb def.GoBanksDataBase, err error) {
 			}
 			var err = DatabaseError{err: "The value for the field \"" + field +
 				"\" in the given mysql configuration is not in the right format.",
-				ErrorCode: DatabaseConfigurationError}
+				code: DatabaseConfigurationError}
 			return "", err
 		}
 		var err = DatabaseError{err: "No field \"" + field +
 			"\" in the given mysql configuration.",
-			ErrorCode: DatabaseConfigurationError}
+			code: DatabaseConfigurationError}
 		return "", err
 	}
 

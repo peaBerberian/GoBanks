@@ -34,7 +34,7 @@ func GetTokenExpiration() int {
 func CreateToken(username string, db def.GoBanksDataBase,
 ) (tokenString string, err error) {
 	if tokenSigningKey == "" {
-		return "", LoginError{ErrorCode: InvalidSigningKeyError}
+		return "", LoginError{code: InvalidSigningKeyError}
 	}
 
 	user, err := GetUserFromUsername(db, username)
@@ -61,7 +61,7 @@ func CreateToken(username string, db def.GoBanksDataBase,
 	tokenString, err = jwToken.SignedString([]byte(tokenSigningKey))
 	if err != nil {
 		return "", LoginError{err: err.Error(),
-			ErrorCode: TokenSigningError}
+			code: TokenSigningError}
 	}
 
 	return tokenString, nil
@@ -80,14 +80,14 @@ func ParseToken(tokenString string) (token UserToken, err error) {
 	if err != nil || !jwToken.Valid {
 		var err = invalidTokenError{}
 		return UserToken{}, LoginError{err: err.Error(),
-			ErrorCode: InvalidTokenError}
+			code: InvalidTokenError}
 	}
 
 	if _, ok := jwToken.Method.(*jwt.SigningMethodHMAC); !ok {
 		var alg = fmt.Sprintf("%s", jwToken.Header["alg"])
 		var err = invalidTokenSigningMethodError{alg}
 		return UserToken{}, LoginError{err: err.Error(),
-			ErrorCode: InvalidTokenSigningMethodError}
+			code: InvalidTokenSigningMethodError}
 	}
 
 	var expirationDate time.Time
@@ -100,7 +100,7 @@ func ParseToken(tokenString string) (token UserToken, err error) {
 	var createUnreadableError = func(field string) (UserToken, error) {
 		err = unreadableTokenError{field: field}
 		return UserToken{}, LoginError{err: err.Error(),
-			ErrorCode: UnreadableTokenError}
+			code: UnreadableTokenError}
 	}
 
 	if userId64, ok := jwToken.Claims["uid"].(float64); !ok {
@@ -162,7 +162,7 @@ func ParseToken(tokenString string) (token UserToken, err error) {
 func verifyToken(token UserToken) error {
 	if token.ExpirationDate.Unix() <= time.Now().Unix() {
 		var err = expiredTokenError{}
-		return LoginError{err: err.Error(), ErrorCode: ExpiredTokenError}
+		return LoginError{err: err.Error(), code: ExpiredTokenError}
 	}
 	return nil
 }

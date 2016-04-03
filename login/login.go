@@ -37,7 +37,7 @@ func RegisterUser(db def.GoBanksDataBase, username string,
 	if usernameTaken {
 		err = alreadyCreatedUserError{username: username}
 		return def.User{}, LoginError{err: err.Error(),
-			ErrorCode: LoginErrorAlreadyTakenUsername}
+			code: LoginErrorAlreadyTakenUsername}
 	}
 
 	user, err = newUser(username, password, administrator)
@@ -69,13 +69,13 @@ func GetUserFromUsername(db def.GoBanksDataBase, username string,
 	if len(users) < 1 {
 		err = noUserFoundError{username: username}
 		return def.User{}, LoginError{err: err.Error(),
-			ErrorCode: LoginErrorNoUsername,
+			code: LoginErrorNoUsername,
 		}
 	}
 	if len(users) >= 2 {
 		err = multipleUserFound{username: username}
 		return def.User{}, LoginError{err: err.Error(),
-			ErrorCode: LoginErrorMultipleUsername,
+			code: LoginErrorMultipleUsername,
 		}
 	}
 
@@ -116,7 +116,7 @@ func authenticateUser(user def.User, password string) (err error) {
 		[]byte(user.Salt+password))
 	if err != nil {
 		return LoginError{err: err.Error(),
-			ErrorCode: LoginErrorWrongPassword}
+			code: LoginErrorWrongPassword}
 	}
 	return nil
 }
