@@ -8,7 +8,7 @@ import "strings"
 
 import "github.com/peaberberian/GoBanks/database"
 
-func ParseFile(f *os.File, accountDbId int, dateFormat string,
+func ParseFile(f *os.File, accountId int, dateFormat string,
 ) (ts []database.Transaction, err error) {
 	var label string
 	var transactionDate time.Time
@@ -37,7 +37,7 @@ func ParseFile(f *os.File, accountDbId int, dateFormat string,
 
 			case "^":
 				ts = append(ts, database.Transaction{
-					LinkedAccountDbId: accountDbId,
+					LinkedAccountId: accountId,
 					Label:             label,
 					TransactionDate:   transactionDate,
 					Debit:             debit,

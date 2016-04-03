@@ -8,13 +8,9 @@ const config_file_path = "./config/config.json"
 // Exact structure of the config.json file
 type configFile struct {
 	// Databases map[string]interface{} `json:"databases"`
-	Databases       databasesConfig
-	TokenExpiration int `json:"jwtExpirationOffset"`
-}
-
-type databasesConfig struct {
-	Typ    string      `json:"type"`
-	Config interface{} `json:"config"`
+	Database        interface{} `json:"database"`
+	TokenExpiration int         `json:"jwtExpirationOffset"`
+	ServerPort      int         `json:"port"`
 }
 
 // getConfig parse the config file. See config_file_path.

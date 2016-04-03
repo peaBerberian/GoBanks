@@ -2,173 +2,187 @@ package database
 
 import "time"
 
-// Interface that any implementation of GoBanks databases must respect
+// Interface that any implementation of GoBanks databases must implement
 type GoBanksDataBase interface {
 	// Free/close the db if needed
 	Close() error
 
+	// TODO separate user part?
 	// Number of users stored in the database
 	UserLength() (len int, err error)
 
 	// Add a single user
-	// Returns user's DbId / possible error
-	AddUser(User) (int, error)
+	AddUser(DBUserParams) (DBUser, error)
 
-	// Remove a single user from its DbId
+	// Remove multiple users, based on filters
 	RemoveUser(int) error
 
-	// Update the attributes of a single user, from its DbId
-	UpdateUser(User) error
+	// Update the attributes of multiple users, based on filters and field
+	// names.
+	UpdateUser(int, []string, DBUserParams) error
 
-	// Get a single user, from its DbId
-	GetUser(int) (User, error)
-
-	// Get multiple users, based on filters
-	GetUsers(UserFilters) ([]User, error)
+	// Get a single user base on its Id.
+	GetUser(DBUserFilters, []string) (DBUser, error)
 
 	// Add a single bank
-	// Returns bank's DbId / possible error
-	AddBank(Bank) (int, error)
+	AddBank(DBBankParams) (DBBank, error)
 
-	// Remove a single bank from its DbId
-	RemoveBank(int) error
+	// Update the attributes of multiple banks, based on filters and field names.
+	UpdateBanks(DBBankFilters, []string, DBBankParams) error
 
-	// Update the attributes of a single bank, from its DbId
-	UpdateBank(Bank) error
-
-	// Get a single bank, from its DbId
-	GetBank(int) (Bank, error)
+	// Remove multiple banks, based on filters
+	RemoveBanks(DBBankFilters) error
 
 	// Get multiple banks, based on filters
-	GetBanks(BankFilters) ([]Bank, error)
+	// The second params are the wanted fields
+	GetBanks(DBBankFilters, []string, uint) ([]DBBank, error)
 
-	// Add a single account for a specific bank DbId
-	// Returns transaction's DbId / possible error
-	AddBankAccount(BankAccount) (int, error)
+	// Add a single account for a specific Id
+	AddAccount(DBAccountParams) (DBAccount, error)
 
-	// Remove a single account from its DbId
-	RemoveBankAccount(int) error
+	// Update the attributes of multiple accounts,
+	// based on filters and field names.
+	UpdateAccounts(DBAccountFilters, []string, DBAccountParams) error
 
-	// Update the attributes of a single account, from its DbId
-	UpdateBankAccount(BankAccount) error
+	// Remove multiple accounts, based on filters
+	RemoveAccounts(DBAccountFilters) error
 
-	// Get a single account, from its DbId
-	GetBankAccount(int) (BankAccount, error)
+	// Get multiple accounts, based on filters
+	// The second params are the wanted fields
+	GetAccounts(DBAccountFilters, []string, uint) ([]DBAccount, error)
 
-	// Get multiple account, based on filters
-	GetBankAccounts(BankAccountFilters) ([]BankAccount, error)
+	// Add a single transaction for a specific Id
+	AddTransaction(DBTransactionParams) (DBTransaction, error)
 
-	// Add a single transaction
-	// Returns transaction's DbId / possible error
-	AddTransaction(Transaction) (int, error)
+	// Update the attributes of multiple transactions,
+	// based on filters and field names.
+	UpdateTransactions(DBTransactionFilters, []string, DBTransactionParams) error
 
-	// Remove a single transaction from its DbId
-	RemoveTransaction(int) error
-
-	// Update the attributes of a single transaction, from its DbId
-	UpdateTransaction(Transaction) error
-
-	// Get a single transaction, from its DbId
-	GetTransaction(int) (Transaction, error)
+	// Remove multiple transactions, based on filters
+	RemoveTransactions(DBTransactionFilters) error
 
 	// Get multiple transactions, based on filters
-	GetTransactions(TransactionFilters) ([]Transaction, error)
+	// The second params are the wanted fields
+	GetTransactions(DBTransactionFilters, []string, uint) ([]DBTransaction, error)
 }
 
-type BankAccountFilters struct {
-	Filters struct {
-		Banks bool
-		Names bool
-	}
-	Values struct {
-		Banks []int
-		Names []string
-	}
+type dbFilterInterface interface {
+	isFilterActivated() bool
+	getFilterValue() interface{}
 }
 
-type BankFilters struct {
-	Filters struct {
-		Users bool
-		Names bool
-	}
-	Values struct {
-		Users []int
-		Names []string
-	}
+type dbBaseFilter struct {
+	Activated bool
 }
 
-type UserFilters struct {
-	Filters struct {
-		Names         bool
-		Administrator bool
-	}
-	Values struct {
-		Names         []string
-		Administrator bool
-	}
+func (d dbBaseFilter) isFilterActivated() bool { return d.Activated }
+
+type DBGenericFilter struct {
+	dbBaseFilter
+	Value interface{}
+}
+
+type DBIntFilter struct {
+	dbBaseFilter
+	Value int
+}
+
+type DBIntArrayFilter struct {
+	dbBaseFilter
+	Value []int
+}
+
+type DBStringFilter struct {
+	dbBaseFilter
+	Value string
+}
+
+type DBStringArrayFilter struct {
+	dbBaseFilter
+	Value []string
+}
+
+type DBBoolFilter struct {
+	dbBaseFilter
+	Value bool
+}
+
+type DBFloatFilter struct {
+	dbBaseFilter
+	Value float32
+}
+
+type DBTimeFilter struct {
+	dbBaseFilter
+	Value time.Time
+}
+
+// About to get really ugly
+func (d DBGenericFilter) getFilterValue() interface{}     { return d.Value }
+func (d DBIntFilter) getFilterValue() interface{}         { return d.Value }
+func (d DBIntArrayFilter) getFilterValue() interface{}    { return d.Value }
+func (d DBStringFilter) getFilterValue() interface{}      { return d.Value }
+func (d DBStringArrayFilter) getFilterValue() interface{} { return d.Value }
+func (d DBBoolFilter) getFilterValue() interface{}        { return d.Value }
+func (d DBFloatFilter) getFilterValue() interface{}       { return d.Value }
+func (d DBTimeFilter) getFilterValue() interface{}        { return d.Value }
+
+type DBAccountFilters struct {
+	UserId  DBIntFilter
+	Ids     DBIntArrayFilter
+	BankIds DBIntArrayFilter
+	Names   DBStringArrayFilter
+}
+
+type DBBankFilters struct {
+	UserId DBIntFilter
+	Ids    DBIntArrayFilter
+	Names  DBStringArrayFilter
 }
 
 // TODO To implement
-type TransactionCategoryFilter struct {
-	Filters struct {
-		Names  bool
-		Users  bool
-		Parent bool
-	}
-	Values struct {
-		Names  []string
-		Users  []int
-		Parent []int
-	}
+type DBTransactionCategoryFilters struct {
+	UserId DBIntFilter
+	Ids    DBIntArrayFilter
+	Users  DBIntArrayFilter
+	Names  DBStringArrayFilter
+	Parent DBIntArrayFilter
 }
 
-type TransactionFilters struct {
-	Filters struct {
-		Accounts            bool
-		Types               bool
-		FromTransactionDate bool
-		ToTransactionDate   bool
-		FromRecordDate      bool
-		ToRecordDate        bool
-		MinDebit            bool
-		MaxDebit            bool
-		MinCredit           bool
-		MaxCredit           bool
-		SearchLabel         bool
-		SearchDescription   bool
-		SearchReference     bool
-	}
-	Values struct {
-		Accounts            []int
-		Types               []string
-		FromTransactionDate time.Time
-		ToTransactionDate   time.Time
-		FromRecordDate      time.Time
-		ToRecordDate        time.Time
-		MinDebit            float32
-		MaxDebit            float32
-		MinCredit           float32
-		MaxCredit           float32
-		SearchLabel         string
-		SearchDescription   string
-		SearchReference     string
-	}
+type DBUserFilters struct {
+	Id            DBIntFilter
+	Name          DBStringFilter
+	Administrator DBBoolFilter
 }
 
-type Transaction struct {
-	// Id of the transaction in the database
-	// Set by the database's methods.
-	// (starts at 1, 0 if not added to the database)
-	DbId int
+type DBTransactionFilters struct {
+	UserId              DBIntFilter
+	Ids                 DBIntArrayFilter
+	AccountIds          DBIntArrayFilter
+	BankIds             DBIntArrayFilter
+	CategoryIds         DBIntArrayFilter
+	FromTransactionDate DBTimeFilter
+	ToTransactionDate   DBTimeFilter
+	FromRecordDate      DBTimeFilter
+	ToRecordDate        DBTimeFilter
+	MinDebit            DBFloatFilter
+	MaxDebit            DBFloatFilter
+	MinCredit           DBFloatFilter
+	MaxCredit           DBFloatFilter
+	SearchLabel         DBStringFilter
+	SearchDescription   DBStringFilter
+	SearchReference     DBStringFilter
+}
 
-	// DbId for the account concerned by this transaction
-	LinkedAccountDbId int
+type DBTransactionParams struct {
+	// Id for the account concerned by this transaction
+	AccountId int
 
 	// Label describing the transaction
 	Label string
 
 	// Category of the transaction
-	Type string
+	CategoryId string
 
 	// Details on the transaction
 	Description string
@@ -189,11 +203,116 @@ type Transaction struct {
 	Reference string
 }
 
-type User struct {
+type DBTransaction struct {
+	// Id of the transaction in the database
+	// Set by the database's methods.
+	// (starts at 1, 0 if not added to the database)
+	Id int
+
+	// Id for the account concerned by this transaction
+	AccountId int
+
+	// Label describing the transaction
+	Label string
+
+	// Category of the transaction
+	CategoryId string
+
+	// Details on the transaction
+	Description string
+
+	// Date on which the transaction was done
+	TransactionDate time.Time
+
+	// Date on which the transaction was recorded by the bank
+	RecordDate time.Time
+
+	// Amount of money going out of your pocket
+	Debit float32
+
+	// Amount of money going in your pocket
+	Credit float32
+
+	// Bank Reference (id)
+	Reference string
+}
+
+type DBBankParams struct {
+	UserId      int
+	Name        string
+	Description string
+}
+
+type DBBank struct {
+	// Id of the bank in the database
+	// Set by the database's methods.
+	// (starts at 1, 0 if not added to the database)
+	Id int
+
+	// User linked to this Bank
+	// LinkedUser User
+	UserId int
+
+	// Name of the bank
+	Name string
+
+	// Optional description
+	Description string
+}
+
+// TODO To implement
+type DBCategory struct {
+	// Id of the category in the database
+	// Set by the database's methods.
+	// (starts at 1, 0 if not added to the database)
+	Id int
+
+	// User linked to this category
+	LinkedUserId int
+
+	// Name of the category
+	Name string
+
+	// Optional description
+	Description string
+
+	// Id of the parent category
+	// 0 if none
+	ParentId int
+}
+
+type DBAccount struct {
+	// Id of the bank account in the database
+	// Set by the database's methods.
+	// (starts at 1, 0 if not added to the database)
+	Id int
+
+	// Bank Id linked to this account
+	BankId int
+
+	// Name of the bank account
+	Name string
+
+	// Optional description
+	Description string
+}
+
+type DBAccountParams struct {
+	// Bank Id linked to this account
+	BankId int
+
+	// Name of the bank account
+	Name string
+
+	// Optional description
+	Description string
+}
+
+type DBUser struct {
 	// Id for the user in the database
 	// Set by the database's methods.
 	// (starts at 1, 0 if not added to the database)
-	DbId int
+	Id int
 
 	// User's Name
 	Name string
@@ -208,60 +327,16 @@ type User struct {
 	Administrator bool
 }
 
-type Bank struct {
-	// Id of the bank in the database
-	// Set by the database's methods.
-	// (starts at 1, 0 if not added to the database)
-	DbId int
-
-	// User linked to this Bank
-	// LinkedUser User
-	LinkedUserDbId int
-
-	// Name of the bank
+type DBUserParams struct {
+	// User's Name
 	Name string
 
-	// Optional description
-	Description string
-}
+	// Hash of the user's password
+	PasswordHash string
 
-// TODO To implement
-type TransactionCategory struct {
-	// Id of the category in the database
-	// Set by the database's methods.
-	// (starts at 1, 0 if not added to the database)
-	DbId int
+	// Password's salt
+	Salt string
 
-	// User linked to this category
-	LinkedUserDbId int
-
-	// Name of the category
-	Name string
-
-	// Optional description
-	Description string
-
-	// Id of the parent category
-	// 0 if none
-	ParentDbId int
-}
-
-type BankAccount struct {
-	// Id of the bank account in the database
-	// Set by the database's methods.
-	// (starts at 1, 0 if not added to the database)
-	DbId int
-
-	// Bank DbId linked to this account
-	LinkedBankDbId int
-
-	// Name of the bank account
-	Name string
-
-	// Amount of money used as a base. (Not all transactions on it may be
-	// available, we have to set the base to circumvent this)
-	BaseAmount float32
-
-	// Optional description
-	Description string
+	// True if the user is an administrator
+	Administrator bool
 }

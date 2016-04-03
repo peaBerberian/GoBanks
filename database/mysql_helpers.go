@@ -1,64 +1,118 @@
 package database
 
-import "database/sql"
+import (
+	"database/sql"
+	"strings"
 
-func (gbs *goBanksSql) execSqlQuery(query string, args ...interface{},
-) (res sql.Result, err error) {
-	gbs.mutex.Lock()
-	res, err = gbs.db.Exec(query, args...)
-	gbs.mutex.Unlock()
-	return
+	"fmt"
+)
+
+// execQuery is a simple wrapper for the "Exec" sql method.
+func (gbs *goBanksSql) execQuery(query string, args ...interface{},
+) (sql.Result, error) {
+	fmt.Printf("%s : %+v", query, args)
+	return gbs.db.Exec(query, args...)
 }
 
-func (gbs *goBanksSql) getFromTable(tablename string, id int,
-	fields []string) (row *sql.Row) {
-	var requestStr = "SELECT "
+// getRows is a simple wrapper for the "Query" sql method.
+func (gbs *goBanksSql) getRows(query string,
+	args ...interface{}) (*sql.Rows, error) {
 
-	var fieldsLength = len(fields)
-	for i, field := range fields {
-		requestStr += field
-		if i < fieldsLength-1 {
-			requestStr += ", "
-		}
+	fmt.Printf("%s : %+v", query, args)
+	return gbs.db.Query(query, args...)
+}
+
+// joinStringsWithSpace ... joins strings with a space character.
+// example: joinStringsWithSpace("foo", "bar", "baz") => "foo bar baz"
+func joinStringsWithSpace(queries ...string) string {
+	return strings.Join(queries, " ")
+}
+
+// constructSelectString constructs the beginning of a SELECT sql request
+// base on the wanted fields.
+// example: constructSelectString("foo", []{"aa","bb") ->
+// "Select aa, bb FROM "foo"
+func constructSelectString(tablename string, fields []string) string {
+	var str = "SELECT "
+
+	var fieldLength = len(fields)
+	if fieldLength > 0 {
+		str += fields[0] + " "
 	}
-	requestStr = " FROM " + tablename + " WHERE id=?"
 
-	gbs.mutex.Lock()
-	row = gbs.db.QueryRow(requestStr, id)
-	gbs.mutex.Unlock()
-	return row
+	for i := 1; i < fieldLength; i++ {
+		str += ", " + fields[i]
+	}
+
+	str += " FROM " + tablename
+	return str
 }
 
-func (gbs *goBanksSql) updateInTableFromId(tablename string,
-	id int, fields []string, values []interface{}) (err error) {
+// constructDeleteString constructs the simple beginning of a DELETE sql
+// request.
+// example: constructDeleteString("foo") -> "DELETE FROM foo"
+func constructDeleteString(tablename string) string {
+	return "DELETE FROM " + tablename
+}
+
+// constructLimitString constructs a simple SQL LIMIT instruction.
+// example: constructDeleteString(100) -> "LIMIT 100"
+func constructLimitString(limit uint) string {
+	return "LIMIT " + string(limit)
+}
+
+// updateTable performs a UPDATE request on any database table.
+// Here are the arguments it needs:
+//    - tablename: the name of the database table
+//    - conditions: the "where string", optional
+//    - conditionsArgs: arguments for the where string, optional
+//    - fields: the wanted fields to updated
+//    - args: the new values for the wanted string
+func (gbs *goBanksSql) updateTable(tablename string,
+	conditions string, conditionsArgs []interface{}, fields []string,
+	args []interface{}) (err error) {
+
 	var sqlQuery string
 	var requestStr string = "UPDATE " + tablename + " SET "
+
 	var valuesStr string = ""
 
 	var fieldsLength = len(fields)
 	for i, field := range fields {
 		valuesStr += field + "=?"
+
 		if i < fieldsLength-1 {
 			valuesStr += ", "
 		}
 	}
-	valuesStr += " WHERE Id=?"
-	values = append(values, id)
+	valuesStr += " " + conditions
+
+	args = append(args, conditionsArgs...)
 
 	sqlQuery = requestStr + " " + valuesStr
 
-	_, err = gbs.execSqlQuery(sqlQuery, values...)
+	_, err = gbs.execQuery(sqlQuery, args...)
 	return
 }
 
-func (gbs *goBanksSql) removeIdFromTable(tablename string, id int,
-) (err error) {
-	_, err = gbs.execSqlQuery("DELETE FROM "+tablename+" WHERE id=?", id)
-	return
+// removeElemFromTable remove sql row(s) based on the table name, a single
+// field and its value.
+// example: removeElemFromTable("my_table", "id", 5)
+func (gbs *goBanksSql) removeElemFromTable(tablename string, field string,
+	value interface{}) error {
+
+	_, err := gbs.execQuery("DELETE FROM "+tablename+" WHERE "+field+
+		"=?", value)
+	return err
 }
 
+// insertInTable performs an INSERT INTO SQL call based on the given
+// table name, fields and values. It returns the Id of the new given row
+// and a possible sql error.
+// example: insertInTable("my_table", []string{"foo", "biz"},
+// []int{55, 31) => 2, nil
 func (gbs *goBanksSql) insertInTable(tablename string, fields []string,
-	values []interface{}) (id int, err error) {
+	values []interface{}) (int, error) {
 	var sqlQuery string
 	var requestStr string = "INSERT INTO " + tablename + "("
 	var valuesStr string = "values ("
@@ -77,15 +131,98 @@ func (gbs *goBanksSql) insertInTable(tablename string, fields []string,
 	valuesStr += ")"
 	sqlQuery = requestStr + " " + valuesStr
 
-	res, err = gbs.execSqlQuery(sqlQuery, values...)
+	res, err := gbs.execQuery(sqlQuery, values...)
 
 	if err != nil {
 		return 0, err
 	}
 	var id64 int64
 	id64, err = res.LastInsertId()
-	id = int(id64)
-	return
+	return int(id64), err
+}
+
+// stripIdField browse a map[string]string and delete the one(s) having the
+// value "id".
+// example: stripIdField(map[string]string{"toto":"foo", "tutu":"id",
+// "titi": "bar"}) => map[string]string{"toto": "foo", "titi": "bar"}
+func stripIdField(fields map[string]string) []string {
+	var res = make([]string, 0)
+	for _, field := range fields {
+		if field != "id" {
+			res = append(res, field)
+		}
+	}
+	return res
+}
+
+func filterFields(fields []string, fieldsMap map[string]string) []string {
+	var res = make([]string, 0)
+	for _, field := range fields {
+		if val, ok := fieldsMap[field]; ok {
+			res = append(res, val)
+		}
+	}
+	return res
+}
+
+func addConditionEq(cString *string, args *[]interface{}, field string,
+	x interface{}) {
+
+	addConditionOperator(cString, args, field, x, "=")
+}
+
+func addConditionGEq(cString *string, args *[]interface{}, field string,
+	x interface{}) {
+
+	addConditionOperator(cString, args, field, x, ">=")
+}
+
+func addConditionLEq(cString *string, args *[]interface{}, field string,
+	x interface{}) {
+
+	addConditionOperator(cString, args, field, x, "<=")
+}
+
+func addConditionOperator(cString *string, args *[]interface{}, field string,
+	x interface{}, operator string) {
+
+	if len(*cString) > 0 {
+		*cString += "AND "
+	}
+	*cString += field + " " + operator + " ? "
+	*args = append(*args, x)
+}
+
+// /!\ Only works with []int and []string right now
+func addConditionOneOf(cString *string, args *[]interface{}, field string,
+	x interface{}) bool {
+
+	var temp_str string
+	var temp_args []interface{}
+
+	switch x.(type) {
+	case []int:
+		val, _ := x.([]int)
+
+		if len(val) <= 0 {
+			return false
+		}
+		temp_str, temp_args = addSqlFilterIntArray(field, val...)
+	case []string:
+		val, _ := x.([]string)
+
+		if len(val) <= 0 {
+			return false
+		}
+		temp_str, temp_args = addSqlFilterStringArray(field, val...)
+	}
+
+	if len(*cString) > 0 {
+		*cString += "AND "
+	}
+	*cString += temp_str + " "
+	*args = append(*args, temp_args...)
+	return true
 }
 
 // addSqlFilterArray construct both the "condition string" and the sql
@@ -149,4 +286,60 @@ func addSqlFilterStringArray(fieldName string,
 	}
 	fstring += ")"
 	return fstring, farg
+}
+
+func processFilterQuery(conditionString string,
+	args []interface{}, ok bool) (string, []interface{}, bool) {
+
+	if !ok {
+		return "", nil, false
+	}
+
+	if len(conditionString) < 0 {
+		return "", nil, true
+	}
+
+	return joinStringsWithSpace("WHERE", conditionString), args, true
+}
+
+func addFilterOneOf(cString *string, args *[]interface{}, field string,
+	filter dbFilterInterface) bool {
+	if filter.isFilterActivated() {
+		return addConditionOneOf(cString, args, field, filter.getFilterValue())
+	}
+	return true
+}
+
+func addFiltersOneOf(cString *string, args *[]interface{}, fields []string,
+	filters ...dbFilterInterface) bool {
+	for i, filter := range filters {
+		if filter.isFilterActivated() {
+			if ok := addConditionOneOf(cString, args, fields[i],
+				filter.getFilterValue()); !ok {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func addFilterGEq(cString *string, args *[]interface{}, field string,
+	filter dbFilterInterface) {
+	if filter.isFilterActivated() {
+		addConditionGEq(cString, args, field, filter.getFilterValue())
+	}
+}
+
+func addFilterLEq(cString *string, args *[]interface{}, field string,
+	filter dbFilterInterface) {
+	if filter.isFilterActivated() {
+		addConditionLEq(cString, args, field, filter.getFilterValue())
+	}
+}
+
+func addFilterEq(cString *string, args *[]interface{}, field string,
+	filter dbFilterInterface) {
+	if filter.isFilterActivated() {
+		addConditionEq(cString, args, field, filter.getFilterValue())
+	}
 }

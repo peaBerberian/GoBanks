@@ -1,186 +1,204 @@
 package database
 
-import "database/sql"
-import "errors"
-
-const TRANSACTION_TABLE = "transaction"
-
-var TRANSACTION_FIELDS = []string{"account_id", "label", "debit", "credit",
-	"date_of_transaction", "date_of_record"}
-
-func (gbs *goBanksSql) AddTransaction(trns Transaction) (id int,
-	err error) {
-	if trns.LinkedAccountDbId == 0 {
-		return 0, errors.New("The linked account must be added to the" +
-			" database before the transaction.")
+func (gbs *goBanksSql) AddTransaction(trn DBTransactionParams) (DBTransaction,
+	error) {
+	if trn.AccountId == 0 {
+		return DBTransaction{}, missingInformationsError{"AccountId"}
 	}
 
 	values := make([]interface{}, 0)
-	values = append(values, trns.LinkedAccountDbId, trns.Label,
-		trns.Debit, trns.Credit, trns.TransactionDate, trns.RecordDate)
+	values = append(values, trn.AccountId, trn.Label,
+		trn.Debit, trn.Credit, trn.TransactionDate, trn.RecordDate)
 
-	id, err = gbs.insertInTable(TRANSACTION_TABLE, TRANSACTION_FIELDS, values)
+	id, err := gbs.insertInTable(transaction_table,
+		stripIdField(transaction_fields), values)
 	if err != nil {
-		return 0, err
+		return DBTransaction{}, err
 	}
-	trns.DbId = id
-	return
+	return DBTransaction{
+		Id:              id,
+		AccountId:       trn.AccountId,
+		Label:           trn.Label,
+		CategoryId:      trn.CategoryId,
+		Description:     trn.Description,
+		TransactionDate: trn.TransactionDate,
+		RecordDate:      trn.RecordDate,
+		Debit:           trn.Debit,
+		Credit:          trn.Credit,
+		Reference:       trn.Reference,
+	}, nil
 }
 
-func (gbs *goBanksSql) RemoveTransaction(id int) (err error) {
-	return gbs.removeIdFromTable(TRANSACTION_TABLE, id)
+func (gbs *goBanksSql) UpdateTransactions(f DBTransactionFilters,
+	fields []string, trn DBTransactionParams) error {
+
+	var whereString, args, valid = constructTransactionFilterQuery(f)
+	if !valid {
+		return nil
+	}
+
+	var values = make([]interface{}, 0)
+	var filteredFields = make([]string, 0)
+
+	// TODO do that with reflection
+	for _, field := range fields {
+		switch field {
+		case "AccountId":
+			values = append(values, trn.AccountId)
+			filteredFields = append(filteredFields, transaction_fields["AccountId"])
+		case "Label":
+			values = append(values, trn.Label)
+			filteredFields = append(filteredFields, transaction_fields["Label"])
+		case "CategoryId":
+			values = append(values, trn.CategoryId)
+			filteredFields = append(filteredFields, transaction_fields["CategoryId"])
+		case "Description":
+			values = append(values, trn.Description)
+			filteredFields = append(filteredFields, transaction_fields["Description"])
+		case "TransactionDate":
+			values = append(values, trn.TransactionDate)
+			filteredFields = append(filteredFields, transaction_fields["TransactionDate"])
+		case "RecordDate":
+			values = append(values, trn.RecordDate)
+			filteredFields = append(filteredFields, transaction_fields["RecordDate"])
+		case "Debit":
+			values = append(values, trn.Debit)
+			filteredFields = append(filteredFields, transaction_fields["Debit"])
+		case "Credit":
+			values = append(values, trn.Credit)
+			filteredFields = append(filteredFields, transaction_fields["Credit"])
+		case "Reference":
+			values = append(values, trn.Reference)
+			filteredFields = append(filteredFields, transaction_fields["Reference"])
+		}
+	}
+
+	return gbs.updateTable(transaction_table, whereString, args, filteredFields, values)
 }
 
-func (gbs *goBanksSql) UpdateTransaction(trns Transaction,
-) (err error) {
-	values := make([]interface{}, 0)
-	values = append(values, trns.LinkedAccountDbId, trns.Label,
-		trns.Debit, trns.Credit, trns.TransactionDate, trns.RecordDate)
+func (gbs *goBanksSql) RemoveTransactions(f DBTransactionFilters) error {
+	var deleteString = constructDeleteString(transaction_table)
+	var whereString, args, valid = constructTransactionFilterQuery(f)
+	if !valid {
+		return nil
+	}
 
-	return gbs.updateInTableFromId(TRANSACTION_TABLE, trns.DbId,
-		TRANSACTION_FIELDS, values)
+	var queryString = joinStringsWithSpace(deleteString, whereString)
+	_, err := gbs.execQuery(queryString, args...)
+	return err
 }
 
-func (gbs *goBanksSql) GetTransaction(id int) (t Transaction,
-	err error) {
-	row := gbs.getFromTable(TRANSACTION_TABLE, id, TRANSACTION_FIELDS)
-	t.DbId = id
-	err = row.Scan(&t.LinkedAccountDbId, &t.Label, &t.Debit, &t.Credit,
-		&t.TransactionDate, &t.RecordDate)
-	return
-}
+func (gbs *goBanksSql) GetTransactions(f DBTransactionFilters,
+	fields []string, limit uint) ([]DBTransaction,
+	error) {
 
-// TODO search from string (last 3 filters)
-func (gbs *goBanksSql) GetTransactions(f TransactionFilters,
-) (ts []Transaction, err error) {
-	var queryString string
-	var selectString = "select id, account_id, label, debit, credit," +
-		" date_of_transaction, date_of_record from " + TRANSACTION_TABLE + " "
-	var whereString = "WHERE "
-	var atLeastOneFilter = false
-	var sqlArguments = make([]interface{}, 0)
+	var selectString = constructSelectString(transaction_table,
+		filterFields(fields, transaction_fields))
 
-	if f.Filters.Types {
-		if len(f.Values.Types) > 0 {
-			str, arg := addSqlFilterStringArray("name", f.Values.Types...)
-			whereString += str + " "
-			sqlArguments = append(sqlArguments, arg...)
-			atLeastOneFilter = true
-		} else {
-			return ts, nil
-		}
-	}
-	if f.Filters.Accounts {
-		if len(f.Values.Accounts) > 0 {
-			if atLeastOneFilter {
-				whereString += "AND "
-			}
-			addSqlFilterIntArray("account", f.Values.Accounts...)
-			atLeastOneFilter = true
-		} else {
-			return ts, nil
-		}
+	var whereString, args, valid = constructTransactionFilterQuery(f)
+	if !valid {
+		return []DBTransaction{}, nil
 	}
 
-	// Now that's what I call ugly! vol. 74
-	// Ugly but nice though...
-
-	if f.Filters.FromTransactionDate {
-		if atLeastOneFilter {
-			whereString += "AND "
-		}
-		whereString += "date_of_transaction >= ? "
-		sqlArguments = append(sqlArguments, f.Values.FromTransactionDate)
-		atLeastOneFilter = true
+	var queryString = joinStringsWithSpace(selectString, whereString)
+	if limit != 0 {
+		joinStringsWithSpace(queryString, constructLimitString(limit))
 	}
 
-	if f.Filters.ToTransactionDate {
-		if atLeastOneFilter {
-			whereString += "AND "
-		}
-		whereString += "date_of_transaction <= ? "
-		sqlArguments = append(sqlArguments, f.Values.ToTransactionDate)
-		atLeastOneFilter = true
-	}
-
-	if f.Filters.FromRecordDate {
-		if atLeastOneFilter {
-			whereString += "AND "
-		}
-		whereString += "date_of_record >= ? "
-		sqlArguments = append(sqlArguments, f.Values.FromRecordDate)
-		atLeastOneFilter = true
-	}
-
-	if f.Filters.ToRecordDate {
-		if atLeastOneFilter {
-			whereString += "AND "
-		}
-		whereString += "date_of_record < ? "
-		sqlArguments = append(sqlArguments, f.Values.ToRecordDate)
-		atLeastOneFilter = true
-	}
-
-	if f.Filters.MinDebit {
-		if atLeastOneFilter {
-			whereString += "AND "
-		}
-		whereString += "debit >= ? "
-		sqlArguments = append(sqlArguments, f.Values.MinDebit)
-		atLeastOneFilter = true
-	}
-
-	if f.Filters.MaxDebit {
-		if atLeastOneFilter {
-			whereString += "AND "
-		}
-		whereString += "debit <= ? "
-		sqlArguments = append(sqlArguments, f.Values.MaxDebit)
-		atLeastOneFilter = true
-	}
-
-	if f.Filters.MinCredit {
-		if atLeastOneFilter {
-			whereString += "AND "
-		}
-		whereString += "credit >= ? "
-		sqlArguments = append(sqlArguments, f.Values.MinCredit)
-		atLeastOneFilter = true
-	}
-
-	if f.Filters.MaxCredit {
-		if atLeastOneFilter {
-			whereString += "AND "
-		}
-		whereString += "credit <= ? "
-		sqlArguments = append(sqlArguments, f.Values.MaxCredit)
-		atLeastOneFilter = true
-	}
-
-	if atLeastOneFilter {
-		queryString = selectString + whereString
-	} else {
-		queryString = selectString
-	}
-
-	gbs.mutex.Lock()
-	var rows = new(sql.Rows)
-	rows, err = gbs.db.Query(queryString, sqlArguments...)
-	gbs.mutex.Unlock()
-
+	rows, err := gbs.getRows(queryString, args...)
 	if err != nil {
-		return ts, err
+		return []DBTransaction{}, databaseQueryError{err.Error()}
 	}
+
+	var trns []DBTransaction
 
 	for rows.Next() {
-		var trn Transaction
-		err = rows.Scan(&trn.DbId, &trn.LinkedAccountDbId, &trn.Label,
-			&trn.Debit, &trn.Credit, &trn.TransactionDate, &trn.RecordDate)
-		if err != nil {
-			return
-		}
-		ts = append(ts, trn)
-	}
+		var trn DBTransaction
 
-	return
+		var values = make([]interface{}, 0)
+
+		// TODO do that with reflection
+		for _, field := range fields {
+			switch field {
+			case "Id":
+				values = append(values, &trn.Id)
+			case "AccountId":
+				values = append(values, &trn.AccountId)
+			case "Label":
+				values = append(values, &trn.Label)
+			case "CategoryId":
+				values = append(values, &trn.CategoryId)
+			case "Description":
+				values = append(values, &trn.Description)
+			case "TransactionDate":
+				values = append(values, &trn.TransactionDate)
+			case "RecordDate":
+				values = append(values, &trn.RecordDate)
+			case "Debit":
+				values = append(values, &trn.Debit)
+			case "Credit":
+				values = append(values, &trn.Credit)
+			case "Reference":
+				values = append(values, &trn.Reference)
+			}
+		}
+
+		if err = rows.Scan(values...); err != nil {
+			return []DBTransaction{}, err
+		}
+
+		trns = append(trns, trn)
+	}
+	return trns, nil
+}
+
+// constructTransactionFilterQuery takes your filters and returns two elements
+// usable for the final sql query:
+// - The "WHERE" string
+//   For example -> "WHERE id=? AND name=?"
+// - An array on interfaces for the sql arguments.
+//   For example -> 3, "toto"
+// Also returns a boolean if the resulting query is not doable (ex: trying to
+// filter users with an empty array of int).
+func constructTransactionFilterQuery(f DBTransactionFilters) (string,
+	[]interface{}, bool) {
+
+	var conditionString string
+	var args = make([]interface{}, 0)
+
+	var fieldsOneOf = []string{
+		account_fields["Id"],
+		account_fields["AccountId"],
+		account_fields["CategoryId"]}
+
+	ok := addFiltersOneOf(&conditionString, &args, fieldsOneOf,
+		f.Ids,
+		f.AccountIds,
+		f.CategoryIds)
+
+	addFilterGEq(&conditionString, &args,
+		transaction_fields["TransactionDate"], f.FromTransactionDate)
+
+	addFilterLEq(&conditionString, &args,
+		transaction_fields["TransactionDate"], f.ToTransactionDate)
+
+	addFilterGEq(&conditionString, &args,
+		transaction_fields["RecordDate"], f.FromRecordDate)
+
+	addFilterLEq(&conditionString, &args,
+		transaction_fields["RecordDate"], f.ToRecordDate)
+
+	addFilterGEq(&conditionString, &args,
+		transaction_fields["Debit"], f.MinDebit)
+
+	addFilterLEq(&conditionString, &args,
+		transaction_fields["Debit"], f.MaxDebit)
+
+	addFilterGEq(&conditionString, &args,
+		transaction_fields["Credit"], f.MinCredit)
+
+	addFilterLEq(&conditionString, &args,
+		transaction_fields["Credit"], f.MaxCredit)
+
+	return processFilterQuery(conditionString, args, ok)
 }

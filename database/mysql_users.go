@@ -1,108 +1,143 @@
 package database
 
-import "database/sql"
-
-const USER_TABLE = "user"
-
-var USER_FIELDS = []string{"name", "password", "salt", "admin"}
-
-func (gbs *goBanksSql) UserLength() (len int, err error) {
-	gbs.mutex.Lock()
-	row := gbs.db.QueryRow("select count(*) from user")
-	gbs.mutex.Unlock()
-	err = row.Scan(&len)
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (gbs *goBanksSql) AddUser(user User) (id int, err error) {
-	values := make([]interface{}, 0)
-	values = append(values, user.Name, user.PasswordHash,
-		user.Salt, user.Administrator)
-
-	id, err = gbs.insertInTable(TRANSACTION_TABLE, TRANSACTION_FIELDS, values)
+func (gbs *goBanksSql) UserLength() (int, error) {
+	var len int
+	row, err := gbs.getRows("select count(*) from usr")
 	if err != nil {
 		return 0, err
 	}
-	user.DbId = id
-	return
+
+	if err := row.Scan(&len); err != nil {
+		return 0, err
+	}
+
+	return len, nil
 }
 
-func (gbs *goBanksSql) RemoveUser(id int) (err error) {
-	return gbs.removeIdFromTable(USER_TABLE, id)
-}
-
-func (gbs *goBanksSql) UpdateUser(user User) (err error) {
+func (gbs *goBanksSql) AddUser(usr DBUserParams) (DBUser, error) {
 	values := make([]interface{}, 0)
-	values = append(values, user.Name, user.PasswordHash,
-		user.Salt, user.Administrator)
+	values = append(values, usr.Name, usr.PasswordHash,
+		usr.Salt, usr.Administrator)
 
-	return gbs.updateInTableFromId(USER_TABLE, user.DbId,
-		USER_FIELDS, values)
-}
-
-func (gbs *goBanksSql) GetUser(id int) (t User, err error) {
-	row := gbs.getFromTable(USER_TABLE, id, USER_FIELDS)
-	t.DbId = id
-	err = row.Scan(&t.Name, &t.PasswordHash, &t.Salt, &t.Administrator)
-	return
-}
-
-func (gbs *goBanksSql) GetUsers(f UserFilters,
-) (usrs []User, err error) {
-
-	var queryString string
-	var selectString = "select id, name, password, salt, administrator" +
-		" from user "
-	var whereString = "WHERE "
-	var atLeastOneFilter = false
-	var sqlArguments = make([]interface{}, 0)
-
-	if f.Filters.Names {
-		if len(f.Values.Names) > 0 {
-			str, arg := addSqlFilterStringArray("name", f.Values.Names...)
-			whereString += str + " "
-			sqlArguments = append(sqlArguments, arg...)
-			atLeastOneFilter = true
-		} else {
-			return usrs, nil
-		}
-	}
-	if f.Filters.Administrator {
-		if atLeastOneFilter {
-			whereString += "AND "
-		}
-		whereString += "administrator=? "
-		sqlArguments = append(sqlArguments, f.Values.Administrator)
-		atLeastOneFilter = true
-	}
-
-	if atLeastOneFilter {
-		queryString = selectString + whereString
-	} else {
-		queryString = selectString
-	}
-
-	gbs.mutex.Lock()
-	var rows = new(sql.Rows)
-	rows, err = gbs.db.Query(queryString, sqlArguments...)
-	gbs.mutex.Unlock()
+	var id, err = gbs.insertInTable(user_table,
+		stripIdField(user_fields), values)
 
 	if err != nil {
-		return []User{}, err
+		return DBUser{}, databaseQueryError{err.Error()}
+	}
+
+	return DBUser{
+		Id:            id,
+		Name:          usr.Name,
+		PasswordHash:  usr.PasswordHash,
+		Salt:          usr.Salt,
+		Administrator: usr.Administrator,
+	}, nil
+}
+
+func (gbs *goBanksSql) UpdateUser(id int, fields []string,
+	usr DBUserParams) error {
+
+	var values = make([]interface{}, 0)
+	var filteredFields = make([]string, 0)
+
+	// TODO do that with reflection
+	for _, field := range fields {
+		switch field {
+		case "Name":
+			values = append(values, usr.Name)
+			filteredFields = append(filteredFields, bank_fields["Name"])
+		case "PasswordHash":
+			values = append(values, usr.PasswordHash)
+			filteredFields = append(filteredFields, bank_fields["PasswordHash"])
+		case "Salt":
+			values = append(values, usr.Salt)
+			filteredFields = append(filteredFields, bank_fields["Salt"])
+		case "Administrator":
+			values = append(values, usr.Administrator)
+			filteredFields = append(filteredFields, bank_fields["Administrator"])
+		}
+	}
+
+	return gbs.updateTable(user_table, "", make([]interface{}, 0),
+		filteredFields, values)
+}
+
+func (gbs *goBanksSql) RemoveUser(id int) error {
+	// TODO move that code elsewhere
+	_, err := gbs.execQuery("DELETE FROM "+user_table+" WHERE id=?", id)
+	return err
+}
+
+func (gbs *goBanksSql) GetUser(f DBUserFilters, fields []string) (DBUser, error) {
+
+	var selectString = constructSelectString(user_table,
+		filterFields(fields, user_fields))
+
+	// var whereString = "WHERE id=?"
+	// var args = make([]interface{}, 0)
+	// args = append(args, id)
+
+	var whereString, args, valid = constructUserFilterQuery(f)
+	if !valid {
+		return DBUser{}, nil
+	}
+
+	var queryString = joinStringsWithSpace(selectString, whereString)
+
+	rows, err := gbs.getRows(queryString, args...)
+	if err != nil {
+		return DBUser{}, databaseQueryError{err.Error()}
 	}
 
 	for rows.Next() {
-		var usr User
-		err = rows.Scan(&usr.DbId, &usr.Name, &usr.PasswordHash, &usr.Salt,
-			&usr.Administrator)
-		if err != nil {
-			return
-		}
-		usrs = append(usrs, usr)
-	}
+		var usr DBUser
 
-	return
+		var values = make([]interface{}, 0)
+
+		// TODO do that with reflection
+		for _, field := range fields {
+			switch field {
+			case "Id":
+				values = append(values, &usr.Id)
+			case "Name":
+				values = append(values, &usr.Name)
+			case "PasswordHash":
+				values = append(values, &usr.PasswordHash)
+			case "Salt":
+				values = append(values, &usr.Salt)
+			case "Administrator":
+				values = append(values, &usr.Administrator)
+			}
+		}
+
+		if err = rows.Scan(values...); err != nil {
+			return DBUser{}, err
+		}
+
+		return usr, nil
+	}
+	return DBUser{}, nil
+}
+
+// constructUserFilterQuery takes your filters and returns two elements
+// usable for the final sql query:
+// - The "WHERE" string
+//   For example -> "WHERE id=? AND name=?"
+// - An array on interfaces for the sql arguments.
+//   For example -> 3, "toto"
+// Also returns a boolean if the resulting query is not doable (ex: trying to
+// filter users with an empty array of int).
+func constructUserFilterQuery(f DBUserFilters) (string,
+	[]interface{}, bool) {
+
+	var conditionString string
+	var args = make([]interface{}, 0)
+
+	addFilterEq(&conditionString, &args, user_fields["Id"], f.Id)
+	addFilterEq(&conditionString, &args, user_fields["Name"], f.Name)
+	addFilterEq(&conditionString, &args, user_fields["Administrator"],
+		f.Administrator)
+
+	return processFilterQuery(conditionString, args, true)
 }

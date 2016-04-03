@@ -10,5 +10,6 @@
         "database": "GoBanks"
       }
     }
-  }
+  },
+  "port": 8080
 }
