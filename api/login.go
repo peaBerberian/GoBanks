@@ -1,10 +1,10 @@
-package login
+package api
 
 import "crypto/rand"
 import "io"
 import "golang.org/x/crypto/bcrypt"
 
-import def "github.com/peaberberian/GoBanks/database/definitions"
+import def "github.com/peaberberian/GoBanks/database"
 
 func init() {
 	_ = generateSigningKey()
@@ -36,7 +36,7 @@ func RegisterUser(db def.GoBanksDataBase, username string,
 	}
 	if usernameTaken {
 		err = alreadyCreatedUserError{username: username}
-		return def.User{}, LoginError{err: err.Error(),
+		return def.User{}, loginError{err: err.Error(),
 			code: LoginErrorAlreadyTakenUsername}
 	}
 
@@ -68,13 +68,13 @@ func GetUserFromUsername(db def.GoBanksDataBase, username string,
 	users, err := db.GetUsers(f)
 	if len(users) < 1 {
 		err = noUserFoundError{username: username}
-		return def.User{}, LoginError{err: err.Error(),
+		return def.User{}, loginError{err: err.Error(),
 			code: LoginErrorNoUsername,
 		}
 	}
 	if len(users) >= 2 {
 		err = multipleUserFound{username: username}
-		return def.User{}, LoginError{err: err.Error(),
+		return def.User{}, loginError{err: err.Error(),
 			code: LoginErrorMultipleUsername,
 		}
 	}
@@ -115,7 +115,7 @@ func authenticateUser(user def.User, password string) (err error) {
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash),
 		[]byte(user.Salt+password))
 	if err != nil {
-		return LoginError{err: err.Error(),
+		return loginError{err: err.Error(),
 			code: LoginErrorWrongPassword}
 	}
 	return nil

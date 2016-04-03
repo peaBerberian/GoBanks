@@ -1,30 +1,30 @@
-package config
+package main
 
 import "encoding/json"
 import "os"
 
-const CONFIG_FILE_PATH = "./config/config.json"
+const config_file_path = "./config/config.json"
 
 // Exact structure of the config.json file
 type configFile struct {
 	// Databases map[string]interface{} `json:"databases"`
-	Databases       DatabasesConfig
+	Databases       databasesConfig
 	TokenExpiration int `json:"jwtExpirationOffset"`
 }
 
-type DatabasesConfig struct {
-	Type   string      `json:"type"`
+type databasesConfig struct {
+	Typ    string      `json:"type"`
 	Config interface{} `json:"config"`
 }
 
-// Returns map of current config file
+// getConfig parse the config file. See config_file_path.
 // Can return an error if:
 // 	 - the config file could not be read
 // 	 - the config file could not be decoded
-func GetConfig() (cf configFile, err error) {
+func getConfig() (cf configFile, err error) {
 	var ret configFile
 	var f *os.File
-	f, err = os.Open(CONFIG_FILE_PATH)
+	f, err = os.Open(config_file_path)
 	if err != nil {
 		return
 	}

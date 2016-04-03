@@ -1,4 +1,4 @@
-package definitions
+package database
 
 import "time"
 

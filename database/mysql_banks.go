@@ -1,15 +1,13 @@
-package mysql
+package database
 
 import "database/sql"
 import "errors"
-
-import def "github.com/peaberberian/GoBanks/database/definitions"
 
 const BANK_TABLE = "bank"
 
 var BANK_FIELD = []string{"user_id", "name", "description"}
 
-func (gbs *goBanksSql) AddBank(bnk def.Bank) (id int, err error) {
+func (gbs *goBanksSql) AddBank(bnk Bank) (id int, err error) {
 	if bnk.LinkedUserDbId == 0 {
 		return 0, errors.New("The linked user must be added to the" +
 			" database before the bank.")
@@ -31,7 +29,7 @@ func (gbs *goBanksSql) RemoveBank(id int) (err error) {
 	return gbs.removeIdFromTable(BANK_TABLE, id)
 }
 
-func (gbs *goBanksSql) UpdateBank(bnk def.Bank) (err error) {
+func (gbs *goBanksSql) UpdateBank(bnk Bank) (err error) {
 	values := make([]interface{}, 0)
 	values = append(values, bnk.LinkedUserDbId, bnk.Name,
 		bnk.Description)
@@ -40,14 +38,14 @@ func (gbs *goBanksSql) UpdateBank(bnk def.Bank) (err error) {
 		TRANSACTION_FIELDS, values)
 }
 
-func (gbs *goBanksSql) GetBank(id int) (t def.Bank, err error) {
+func (gbs *goBanksSql) GetBank(id int) (t Bank, err error) {
 	row := gbs.getFromTable(TRANSACTION_TABLE, id, TRANSACTION_FIELDS)
 	t.DbId = id
 	err = row.Scan(&t.LinkedUserDbId, &t.Name, &t.Description)
 	return
 }
 
-func (gbs *goBanksSql) GetBanks(f def.BankFilters) (bs []def.Bank,
+func (gbs *goBanksSql) GetBanks(f BankFilters) (bs []Bank,
 	err error) {
 	var queryString string
 	var selectString = "select id, user_id, name, description from bank "
@@ -62,7 +60,7 @@ func (gbs *goBanksSql) GetBanks(f def.BankFilters) (bs []def.Bank,
 			sqlArguments = append(sqlArguments, arg...)
 			atLeastOneFilter = true
 		} else {
-			return []def.Bank{}, nil
+			return []Bank{}, nil
 		}
 	}
 	if f.Filters.Users {
@@ -75,7 +73,7 @@ func (gbs *goBanksSql) GetBanks(f def.BankFilters) (bs []def.Bank,
 			sqlArguments = append(sqlArguments, arg...)
 			atLeastOneFilter = true
 		} else {
-			return []def.Bank{}, nil
+			return []Bank{}, nil
 		}
 	}
 
@@ -91,11 +89,11 @@ func (gbs *goBanksSql) GetBanks(f def.BankFilters) (bs []def.Bank,
 	gbs.mutex.Unlock()
 
 	if err != nil {
-		return []def.Bank{}, err
+		return []Bank{}, err
 	}
 
 	for rows.Next() {
-		var bnk def.Bank
+		var bnk Bank
 		err = rows.Scan(&bnk.DbId, &bnk.LinkedUserDbId, &bnk.Name,
 			&bnk.Description)
 		if err != nil {

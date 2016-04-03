@@ -1,4 +1,4 @@
-package qif
+package file
 
 import "io"
 import "os"
@@ -6,11 +6,10 @@ import "bufio"
 import "time"
 import "strings"
 
-import def "github.com/peaberberian/GoBanks/database/definitions"
-import "github.com/peaberberian/GoBanks/utils"
+import "github.com/peaberberian/GoBanks/database"
 
 func ParseFile(f *os.File, accountDbId int, dateFormat string,
-) (ts []def.Transaction, err error) {
+) (ts []database.Transaction, err error) {
 	var label string
 	var transactionDate time.Time
 	var recordDate time.Time
@@ -37,7 +36,7 @@ func ParseFile(f *os.File, accountDbId int, dateFormat string,
 			switch string(strLine[0]) {
 
 			case "^":
-				ts = append(ts, def.Transaction{
+				ts = append(ts, database.Transaction{
 					LinkedAccountDbId: accountDbId,
 					Label:             label,
 					TransactionDate:   transactionDate,
@@ -70,11 +69,11 @@ func ParseFile(f *os.File, accountDbId int, dateFormat string,
 				if len(strLine) > 1 {
 					switch string(strLine[1]) {
 					case "-":
-						debit, err = utils.StrToFlt32(strLine[2:len(strLine)])
+						debit, err = StrToFlt32(strLine[2:len(strLine)])
 					case "+":
-						credit, err = utils.StrToFlt32(strLine[2:len(strLine)])
+						credit, err = StrToFlt32(strLine[2:len(strLine)])
 					default:
-						credit, err = utils.StrToFlt32(strLine[1:len(strLine)])
+						credit, err = StrToFlt32(strLine[1:len(strLine)])
 					}
 					if err != nil {
 						return

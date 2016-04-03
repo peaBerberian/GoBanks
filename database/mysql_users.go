@@ -1,8 +1,6 @@
-package mysql
+package database
 
 import "database/sql"
-
-import def "github.com/peaberberian/GoBanks/database/definitions"
 
 const USER_TABLE = "user"
 
@@ -19,7 +17,7 @@ func (gbs *goBanksSql) UserLength() (len int, err error) {
 	return
 }
 
-func (gbs *goBanksSql) AddUser(user def.User) (id int, err error) {
+func (gbs *goBanksSql) AddUser(user User) (id int, err error) {
 	values := make([]interface{}, 0)
 	values = append(values, user.Name, user.PasswordHash,
 		user.Salt, user.Administrator)
@@ -36,7 +34,7 @@ func (gbs *goBanksSql) RemoveUser(id int) (err error) {
 	return gbs.removeIdFromTable(USER_TABLE, id)
 }
 
-func (gbs *goBanksSql) UpdateUser(user def.User) (err error) {
+func (gbs *goBanksSql) UpdateUser(user User) (err error) {
 	values := make([]interface{}, 0)
 	values = append(values, user.Name, user.PasswordHash,
 		user.Salt, user.Administrator)
@@ -45,15 +43,15 @@ func (gbs *goBanksSql) UpdateUser(user def.User) (err error) {
 		USER_FIELDS, values)
 }
 
-func (gbs *goBanksSql) GetUser(id int) (t def.User, err error) {
+func (gbs *goBanksSql) GetUser(id int) (t User, err error) {
 	row := gbs.getFromTable(USER_TABLE, id, USER_FIELDS)
 	t.DbId = id
 	err = row.Scan(&t.Name, &t.PasswordHash, &t.Salt, &t.Administrator)
 	return
 }
 
-func (gbs *goBanksSql) GetUsers(f def.UserFilters,
-) (usrs []def.User, err error) {
+func (gbs *goBanksSql) GetUsers(f UserFilters,
+) (usrs []User, err error) {
 
 	var queryString string
 	var selectString = "select id, name, password, salt, administrator" +
@@ -93,11 +91,11 @@ func (gbs *goBanksSql) GetUsers(f def.UserFilters,
 	gbs.mutex.Unlock()
 
 	if err != nil {
-		return []def.User{}, err
+		return []User{}, err
 	}
 
 	for rows.Next() {
-		var usr def.User
+		var usr User
 		err = rows.Scan(&usr.DbId, &usr.Name, &usr.PasswordHash, &usr.Salt,
 			&usr.Administrator)
 		if err != nil {

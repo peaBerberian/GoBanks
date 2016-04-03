@@ -1,4 +1,4 @@
-package mysql
+package database
 
 import "database/sql"
 import "sync"
@@ -10,7 +10,7 @@ type goBanksSql struct {
 	mutex sync.Mutex
 }
 
-func New(user string, pw string, access string, database string,
+func newMySqlDB(user string, pw string, access string, database string,
 ) (gbs *goBanksSql, err error) {
 	var db *sql.DB
 	db, err = sql.Open("mysql", user+":"+pw+"@"+access+"/"+database+

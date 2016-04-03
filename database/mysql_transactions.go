@@ -1,16 +1,14 @@
-package mysql
+package database
 
 import "database/sql"
 import "errors"
-
-import def "github.com/peaberberian/GoBanks/database/definitions"
 
 const TRANSACTION_TABLE = "transaction"
 
 var TRANSACTION_FIELDS = []string{"account_id", "label", "debit", "credit",
 	"date_of_transaction", "date_of_record"}
 
-func (gbs *goBanksSql) AddTransaction(trns def.Transaction) (id int,
+func (gbs *goBanksSql) AddTransaction(trns Transaction) (id int,
 	err error) {
 	if trns.LinkedAccountDbId == 0 {
 		return 0, errors.New("The linked account must be added to the" +
@@ -33,7 +31,7 @@ func (gbs *goBanksSql) RemoveTransaction(id int) (err error) {
 	return gbs.removeIdFromTable(TRANSACTION_TABLE, id)
 }
 
-func (gbs *goBanksSql) UpdateTransaction(trns def.Transaction,
+func (gbs *goBanksSql) UpdateTransaction(trns Transaction,
 ) (err error) {
 	values := make([]interface{}, 0)
 	values = append(values, trns.LinkedAccountDbId, trns.Label,
@@ -43,7 +41,7 @@ func (gbs *goBanksSql) UpdateTransaction(trns def.Transaction,
 		TRANSACTION_FIELDS, values)
 }
 
-func (gbs *goBanksSql) GetTransaction(id int) (t def.Transaction,
+func (gbs *goBanksSql) GetTransaction(id int) (t Transaction,
 	err error) {
 	row := gbs.getFromTable(TRANSACTION_TABLE, id, TRANSACTION_FIELDS)
 	t.DbId = id
@@ -53,8 +51,8 @@ func (gbs *goBanksSql) GetTransaction(id int) (t def.Transaction,
 }
 
 // TODO search from string (last 3 filters)
-func (gbs *goBanksSql) GetTransactions(f def.TransactionFilters,
-) (ts []def.Transaction, err error) {
+func (gbs *goBanksSql) GetTransactions(f TransactionFilters,
+) (ts []Transaction, err error) {
 	var queryString string
 	var selectString = "select id, account_id, label, debit, credit," +
 		" date_of_transaction, date_of_record from " + TRANSACTION_TABLE + " "
@@ -175,7 +173,7 @@ func (gbs *goBanksSql) GetTransactions(f def.TransactionFilters,
 	}
 
 	for rows.Next() {
-		var trn def.Transaction
+		var trn Transaction
 		err = rows.Scan(&trn.DbId, &trn.LinkedAccountDbId, &trn.Label,
 			&trn.Debit, &trn.Credit, &trn.TransactionDate, &trn.RecordDate)
 		if err != nil {

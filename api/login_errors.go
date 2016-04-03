@@ -1,7 +1,7 @@
-package login
+package api
 
-// Error codes for LoginError
-// You can retrieve them on any LoginError{}.ErrorCode
+// Error codes for loginError
+// You can retrieve them on returned errors.ErrorCode()
 const (
 	// Every Login error that could not be categorized
 	LoginErrorUnknown uint32 = 600 + iota
@@ -40,20 +40,20 @@ const (
 	InvalidSigningKeyError
 )
 
-// LoginError defines Errors happening on login (not from database/crypting
+// loginError defines Errors happening on login (not from database/crypting
 // errors)
-type LoginError struct {
+type loginError struct {
 	err string
 
 	// Error code. See constants.
 	code uint32
 }
 
-func (lerr LoginError) ErrorCode() uint32 {
+func (lerr loginError) ErrorCode() uint32 {
 	return lerr.code
 }
 
-func (lerr LoginError) Error() string {
+func (lerr loginError) Error() string {
 	if lerr.err != "" {
 		return lerr.err
 	}

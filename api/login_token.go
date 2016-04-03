@@ -1,9 +1,9 @@
-package login
+package api
 
 import "fmt"
 import "time"
 
-import def "github.com/peaberberian/GoBanks/database/definitions"
+import gdb "github.com/peaberberian/GoBanks/database"
 
 import jwt "github.com/dgrijalva/jwt-go"
 
@@ -31,10 +31,10 @@ func GetTokenExpiration() int {
 // CreateToken creates a new token string for a specific user.
 // Returns an error if a problem with the databases was encountered or if
 // the signing key is not secure enough.
-func CreateToken(username string, db def.GoBanksDataBase,
+func CreateToken(username string, db gdb.GoBanksDataBase,
 ) (tokenString string, err error) {
 	if tokenSigningKey == "" {
-		return "", LoginError{code: InvalidSigningKeyError}
+		return "", loginError{code: InvalidSigningKeyError}
 	}
 
 	user, err := GetUserFromUsername(db, username)
@@ -60,7 +60,7 @@ func CreateToken(username string, db def.GoBanksDataBase,
 	jwToken.Claims["adm"] = user.Administrator
 	tokenString, err = jwToken.SignedString([]byte(tokenSigningKey))
 	if err != nil {
-		return "", LoginError{err: err.Error(),
+		return "", loginError{err: err.Error(),
 			code: TokenSigningError}
 	}
 
@@ -79,14 +79,14 @@ func ParseToken(tokenString string) (token UserToken, err error) {
 
 	if err != nil || !jwToken.Valid {
 		var err = invalidTokenError{}
-		return UserToken{}, LoginError{err: err.Error(),
+		return UserToken{}, loginError{err: err.Error(),
 			code: InvalidTokenError}
 	}
 
 	if _, ok := jwToken.Method.(*jwt.SigningMethodHMAC); !ok {
 		var alg = fmt.Sprintf("%s", jwToken.Header["alg"])
 		var err = invalidTokenSigningMethodError{alg}
-		return UserToken{}, LoginError{err: err.Error(),
+		return UserToken{}, loginError{err: err.Error(),
 			code: InvalidTokenSigningMethodError}
 	}
 
@@ -99,7 +99,7 @@ func ParseToken(tokenString string) (token UserToken, err error) {
 
 	var createUnreadableError = func(field string) (UserToken, error) {
 		err = unreadableTokenError{field: field}
-		return UserToken{}, LoginError{err: err.Error(),
+		return UserToken{}, loginError{err: err.Error(),
 			code: UnreadableTokenError}
 	}
 
@@ -162,15 +162,15 @@ func ParseToken(tokenString string) (token UserToken, err error) {
 func verifyToken(token UserToken) error {
 	if token.ExpirationDate.Unix() <= time.Now().Unix() {
 		var err = expiredTokenError{}
-		return LoginError{err: err.Error(), code: ExpiredTokenError}
+		return loginError{err: err.Error(), code: ExpiredTokenError}
 	}
 	return nil
 }
 
-func getAccountsForBankIds(db def.GoBanksDataBase,
+func getAccountsForBankIds(db gdb.GoBanksDataBase,
 	bankIds []int) (accIds []int, err error) {
 
-	var accountsFilter def.BankAccountFilters
+	var accountsFilter gdb.BankAccountFilters
 	accountsFilter.Filters.Banks = true
 	accountsFilter.Values.Banks = bankIds
 	accs, err := db.GetBankAccounts(accountsFilter)
@@ -183,10 +183,10 @@ func getAccountsForBankIds(db def.GoBanksDataBase,
 	return
 }
 
-func getBanksForUserId(db def.GoBanksDataBase,
+func getBanksForUserId(db gdb.GoBanksDataBase,
 	userid int) (bnkids []int, err error) {
 
-	var banksFilter def.BankFilters
+	var banksFilter gdb.BankFilters
 	banksFilter.Filters.Users = true
 	banksFilter.Values.Users = []int{userid}
 	bnks, err := db.GetBanks(banksFilter)

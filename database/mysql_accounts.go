@@ -1,15 +1,13 @@
-package mysql
+package database
 
 import "database/sql"
 import "errors"
-
-import def "github.com/peaberberian/GoBanks/database/definitions"
 
 const ACCOUNT_TABLE = "account"
 
 var ACCOUNT_FIELDS = []string{"bank_id", "name", "base_amount", "description"}
 
-func (gbs *goBanksSql) AddBankAccount(acc def.BankAccount) (id int,
+func (gbs *goBanksSql) AddBankAccount(acc BankAccount) (id int,
 	err error) {
 	if acc.LinkedBankDbId == 0 {
 		return 0, errors.New("The linked bank must be added to the" +
@@ -32,7 +30,7 @@ func (gbs *goBanksSql) RemoveBankAccount(id int) (err error) {
 	return gbs.removeIdFromTable(ACCOUNT_TABLE, id)
 }
 
-func (gbs *goBanksSql) UpdateBankAccount(acc def.BankAccount) (err error) {
+func (gbs *goBanksSql) UpdateBankAccount(acc BankAccount) (err error) {
 	values := make([]interface{}, 0)
 	values = append(values, acc.LinkedBankDbId, acc.Name,
 		acc.BaseAmount, acc.Description)
@@ -41,7 +39,7 @@ func (gbs *goBanksSql) UpdateBankAccount(acc def.BankAccount) (err error) {
 		TRANSACTION_FIELDS, values)
 }
 
-func (gbs *goBanksSql) GetBankAccount(id int) (t def.BankAccount,
+func (gbs *goBanksSql) GetBankAccount(id int) (t BankAccount,
 	err error) {
 	row := gbs.getFromTable(TRANSACTION_TABLE, id, TRANSACTION_FIELDS)
 	t.DbId = id
@@ -49,8 +47,8 @@ func (gbs *goBanksSql) GetBankAccount(id int) (t def.BankAccount,
 	return
 }
 
-func (gbs *goBanksSql) GetBankAccounts(f def.BankAccountFilters,
-) (accounts []def.BankAccount, err error) {
+func (gbs *goBanksSql) GetBankAccounts(f BankAccountFilters,
+) (accounts []BankAccount, err error) {
 	var queryString string
 	var selectString = "select id, bank_id, name, base_amount," +
 		" description from account "
@@ -98,7 +96,7 @@ func (gbs *goBanksSql) GetBankAccounts(f def.BankAccountFilters,
 	}
 
 	for rows.Next() {
-		var acnt def.BankAccount
+		var acnt BankAccount
 		err = rows.Scan(&acnt.DbId, &acnt.LinkedBankDbId, &acnt.Name,
 			&acnt.BaseAmount, &acnt.Description)
 		if err != nil {

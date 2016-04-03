@@ -1,13 +1,11 @@
 package main
 
-import "github.com/peaberberian/GoBanks/config"
 import "github.com/peaberberian/GoBanks/database"
-import "github.com/peaberberian/GoBanks/login"
+import "github.com/peaberberian/GoBanks/api"
 
 // used for tests
 import "fmt"
 
-// TODO move that
 type GoBanksError interface {
 	error
 	ErrorCode() uint32
@@ -15,23 +13,23 @@ type GoBanksError interface {
 
 // set configuration before starting
 func init() {
-	conf, err := config.GetConfig()
+	conf, err := getConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	var typ = conf.Databases.Type
+	var typ = conf.Databases.Typ
 	if val, ok := conf.Databases.Config.(map[string]interface{}); ok {
 		err = database.Set(typ, val[typ])
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		panic("The configuration file is not valid" +
+		panic("The configuration file is not valid " +
 			"(The database configuration could not be understood).")
 	}
 
-	login.SetTokenExpiration(conf.TokenExpiration)
+	api.SetTokenExpiration(conf.TokenExpiration)
 }
 
 // create database and launch the application
@@ -41,9 +39,9 @@ func main() {
 		panic(err)
 	}
 
-	token, err := login.CreateToken("oscarito", db)
+	token, err := api.CreateToken("oscarito", db)
 	fmt.Println("token: ", token, err)
-	myToken, err := login.ParseToken(token)
+	myToken, err := api.ParseToken(token)
 	fmt.Println("token: ", myToken, err)
 
 	defer db.Close()

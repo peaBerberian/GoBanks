@@ -1,28 +1,24 @@
 package database
 
-import mysql "github.com/peaberberian/GoBanks/database/mysql"
-import def "github.com/peaberberian/GoBanks/database/definitions"
-
-type databaseConfiguration struct {
+// Globally accessible configuration
+var dbConfig struct {
 	name   string
 	config map[string]interface{}
 }
 
-var dbConf databaseConfiguration
-
 // New creates a new database with the configuration given in the Set
 // function.
-func New() (gdb def.GoBanksDataBase, err error) {
-	if dbConf.name == "" {
-		return gdb, DatabaseError{err: "Database is not yet configured. " +
+func New() (gdb GoBanksDataBase, err error) {
+	if dbConfig.name == "" {
+		return gdb, databaseError{err: "Database is not yet configured. " +
 			"Please call the Set method.", code: DatabaseConfigurationError}
 	}
 
-	switch dbConf.name {
+	switch dbConfig.name {
 	case "mySql":
 		return newMysql()
 	default:
-		var err = DatabaseError{err: "Can't manage a(n) " + dbConf.name +
+		var err = databaseError{err: "Can't manage a(n) " + dbConfig.name +
 			" database.", code: DatabaseConfigurationError}
 		return gdb, err
 	}
@@ -37,12 +33,12 @@ func New() (gdb def.GoBanksDataBase, err error) {
 // If any problem is detected while setting this config, an error will
 // be returned.
 func Set(typ string, config interface{}) error {
-	dbConf.name = typ
+	dbConfig.name = typ
 
 	if val, ok := config.(map[string]interface{}); ok {
-		dbConf.config = val
+		dbConfig.config = val
 	} else {
-		var err = DatabaseError{err: "Wrong database configuration.",
+		var err = databaseError{err: "Wrong database configuration.",
 			code: DatabaseConfigurationError}
 		return err
 	}
@@ -50,20 +46,20 @@ func Set(typ string, config interface{}) error {
 }
 
 // newMysql creates specifically mysql databases.
-func newMysql() (gdb def.GoBanksDataBase, err error) {
-	var c = dbConf.config
+func newMysql() (gdb GoBanksDataBase, err error) {
+	var c = dbConfig.config
 
 	var parseField = func(field string) (string, error) {
 		if val, ok := c[field]; ok {
 			if val, ok := val.(string); ok {
 				return val, nil
 			}
-			var err = DatabaseError{err: "The value for the field \"" + field +
+			var err = databaseError{err: "The value for the field \"" + field +
 				"\" in the given mysql configuration is not in the right format.",
 				code: DatabaseConfigurationError}
 			return "", err
 		}
-		var err = DatabaseError{err: "No field \"" + field +
+		var err = databaseError{err: "No field \"" + field +
 			"\" in the given mysql configuration.",
 			code: DatabaseConfigurationError}
 		return "", err
@@ -80,6 +76,6 @@ func newMysql() (gdb def.GoBanksDataBase, err error) {
 		args[i] = val
 	}
 
-	gdb, err = mysql.New(args[0], args[1], args[2], args[3])
+	gdb, err = newMySqlDB(args[0], args[1], args[2], args[3])
 	return
 }
