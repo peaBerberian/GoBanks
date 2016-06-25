@@ -1,15 +1,10 @@
 {
   "jwtExpirationOffset": 2,
-  "databases": {
-    "type": "mySql",
-    "config": {
-      "mySql": {
-        "user": "username",
-        "password": "pass",
-        "access": "tcp(myurl:myPort)",
-        "database": "GoBanks"
-      }
-    }
+  "database": {
+    "user": "username",
+    "password": "pass",
+    "access": "tcp(myurl:myPort)",
+    "database": "GoBanks"
   },
   "port": 8080
 }
