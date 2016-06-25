@@ -128,11 +128,13 @@ func constructAccountFilterQuery(f DBAccountFilters) (string,
 	var conditionString string
 	var args = make([]interface{}, 0)
 
+	// fields we can filter here
 	var fieldsOneOf = []string{
 		account_fields["Id"],
 		account_fields["Name"],
 		account_fields["BankId"]}
 
+	// construct filters
 	ok := addFiltersOneOf(&conditionString, &args, fieldsOneOf,
 		f.Ids,
 		f.Names,
