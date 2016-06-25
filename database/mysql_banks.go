@@ -34,7 +34,6 @@ func (gbs *goBanksSql) UpdateBanks(f DBBankFilters, fields []string,
 	var values = make([]interface{}, 0)
 	var filteredFields = make([]string, 0)
 
-	// TODO do that with reflection
 	for _, field := range fields {
 		switch field {
 		case "UserId":
@@ -77,7 +76,8 @@ func (gbs *goBanksSql) GetBanks(f DBBankFilters, fields []string,
 
 	var queryString = joinStringsWithSpace(selectString, whereString)
 	if limit != 0 {
-		joinStringsWithSpace(queryString, constructLimitString(limit))
+		queryString = joinStringsWithSpace(queryString, "LIMIT ?")
+		args = append(args, limit)
 	}
 
 	rows, err := gbs.getRows(queryString, args...)
@@ -92,7 +92,6 @@ func (gbs *goBanksSql) GetBanks(f DBBankFilters, fields []string,
 
 		var values = make([]interface{}, 0)
 
-		// TODO do that with reflection
 		for _, field := range fields {
 			switch field {
 			case "Id":
@@ -130,7 +129,10 @@ func constructBankFilterQuery(f DBBankFilters) (string, []interface{}, bool) {
 	addFilterEq(&conditionString, &args, bank_fields["UserId"], f.UserId)
 
 	var fieldsOneOf = []string{bank_fields["Id"], bank_fields["Name"]}
-	ok := addFiltersOneOf(&conditionString, &args, fieldsOneOf, f.Ids, f.Names)
+	ok := addFiltersOneOf(&conditionString, &args, fieldsOneOf,
+		f.Ids,
+		f.Names,
+	)
 
 	return processFilterQuery(conditionString, args, ok)
 }

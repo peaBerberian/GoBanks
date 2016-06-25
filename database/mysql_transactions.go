@@ -1,20 +1,32 @@
 package database
 
-func (gbs *goBanksSql) AddTransaction(trn DBTransactionParams) (DBTransaction,
-	error) {
+func (gbs *goBanksSql) AddTransaction(trn DBTransactionParams) (
+	DBTransaction,
+	error,
+) {
 	if trn.AccountId == 0 {
 		return DBTransaction{}, missingInformationsError{"AccountId"}
 	}
 
 	values := make([]interface{}, 0)
-	values = append(values, trn.AccountId, trn.Label,
-		trn.Debit, trn.Credit, trn.TransactionDate, trn.RecordDate)
+	values = append(values,
+		trn.AccountId,
+		trn.Label,
+		trn.CategoryId,
+		trn.Description,
+		trn.TransactionDate,
+		trn.RecordDate,
+		trn.Debit,
+		trn.Credit,
+		trn.Reference,
+	)
 
 	id, err := gbs.insertInTable(transaction_table,
 		stripIdField(transaction_fields), values)
 	if err != nil {
-		return DBTransaction{}, err
+		return DBTransaction{}, databaseQueryError{err: err.Error()}
 	}
+
 	return DBTransaction{
 		Id:              id,
 		AccountId:       trn.AccountId,
@@ -40,7 +52,6 @@ func (gbs *goBanksSql) UpdateTransactions(f DBTransactionFilters,
 	var values = make([]interface{}, 0)
 	var filteredFields = make([]string, 0)
 
-	// TODO do that with reflection
 	for _, field := range fields {
 		switch field {
 		case "AccountId":
@@ -84,6 +95,7 @@ func (gbs *goBanksSql) RemoveTransactions(f DBTransactionFilters) error {
 	}
 
 	var queryString = joinStringsWithSpace(deleteString, whereString)
+
 	_, err := gbs.execQuery(queryString, args...)
 	return err
 }
@@ -102,7 +114,8 @@ func (gbs *goBanksSql) GetTransactions(f DBTransactionFilters,
 
 	var queryString = joinStringsWithSpace(selectString, whereString)
 	if limit != 0 {
-		joinStringsWithSpace(queryString, constructLimitString(limit))
+		queryString = joinStringsWithSpace(queryString, "LIMIT ?")
+		args = append(args, limit)
 	}
 
 	rows, err := gbs.getRows(queryString, args...)
@@ -117,7 +130,6 @@ func (gbs *goBanksSql) GetTransactions(f DBTransactionFilters,
 
 		var values = make([]interface{}, 0)
 
-		// TODO do that with reflection
 		for _, field := range fields {
 			switch field {
 			case "Id":
@@ -167,14 +179,16 @@ func constructTransactionFilterQuery(f DBTransactionFilters) (string,
 	var args = make([]interface{}, 0)
 
 	var fieldsOneOf = []string{
-		account_fields["Id"],
-		account_fields["AccountId"],
-		account_fields["CategoryId"]}
+		transaction_fields["Id"],
+		transaction_fields["AccountId"],
+		transaction_fields["CategoryId"],
+		transaction_fields["Reference"]}
 
 	ok := addFiltersOneOf(&conditionString, &args, fieldsOneOf,
 		f.Ids,
 		f.AccountIds,
-		f.CategoryIds)
+		f.CategoryIds,
+		f.References)
 
 	addFilterGEq(&conditionString, &args,
 		transaction_fields["TransactionDate"], f.FromTransactionDate)

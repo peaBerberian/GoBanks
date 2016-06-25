@@ -43,11 +43,15 @@ func handlerV1(w http.ResponseWriter, r *http.Request) {
 		handleBanks(w, r, &token)
 	case api_calls["accounts"]:
 		handleAccounts(w, r, &token)
+	case api_calls["categories"]:
+		handleCategories(w, r, &token)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
+// routeIsInApi simply checks if the given route is in the
+// api_calls map values
 func routeIsInApi(route string) bool {
 	for _, val := range api_calls {
 		if val == route {

@@ -41,7 +41,6 @@ func (gbs *goBanksSql) UpdateUser(id int, fields []string,
 	var values = make([]interface{}, 0)
 	var filteredFields = make([]string, 0)
 
-	// TODO do that with reflection
 	for _, field := range fields {
 		switch field {
 		case "Name":
@@ -70,7 +69,6 @@ func (gbs *goBanksSql) RemoveUser(id int) error {
 }
 
 func (gbs *goBanksSql) GetUser(f DBUserFilters, fields []string) (DBUser, error) {
-
 	var selectString = constructSelectString(user_table,
 		filterFields(fields, user_fields))
 
@@ -95,7 +93,6 @@ func (gbs *goBanksSql) GetUser(f DBUserFilters, fields []string) (DBUser, error)
 
 		var values = make([]interface{}, 0)
 
-		// TODO do that with reflection
 		for _, field := range fields {
 			switch field {
 			case "Id":

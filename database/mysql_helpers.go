@@ -10,7 +10,7 @@ import (
 // execQuery is a simple wrapper for the "Exec" sql method.
 func (gbs *goBanksSql) execQuery(query string, args ...interface{},
 ) (sql.Result, error) {
-	fmt.Printf("%s : %+v", query, args)
+	fmt.Printf("%s : %+v\n", query, args)
 	return gbs.db.Exec(query, args...)
 }
 
@@ -18,7 +18,7 @@ func (gbs *goBanksSql) execQuery(query string, args ...interface{},
 func (gbs *goBanksSql) getRows(query string,
 	args ...interface{}) (*sql.Rows, error) {
 
-	fmt.Printf("%s : %+v", query, args)
+	fmt.Printf("%s : %+v\n", query, args)
 	return gbs.db.Query(query, args...)
 }
 
@@ -29,7 +29,7 @@ func joinStringsWithSpace(queries ...string) string {
 }
 
 // constructSelectString constructs the beginning of a SELECT sql request
-// base on the wanted fields.
+// based on the wanted fields.
 // example: constructSelectString("foo", []{"aa","bb") ->
 // "Select aa, bb FROM "foo"
 func constructSelectString(tablename string, fields []string) string {
@@ -66,8 +66,8 @@ func constructLimitString(limit uint) string {
 //    - tablename: the name of the database table
 //    - conditions: the "where string", optional
 //    - conditionsArgs: arguments for the where string, optional
-//    - fields: the wanted fields to updated
-//    - args: the new values for the wanted string
+//    - fields: the wanted fields to update
+//    - args: the new values for the wanted fields
 func (gbs *goBanksSql) updateTable(tablename string,
 	conditions string, conditionsArgs []interface{}, fields []string,
 	args []interface{}) (err error) {
@@ -155,6 +155,8 @@ func stripIdField(fields map[string]string) []string {
 	return res
 }
 
+// Returns a []string by obtaining values from a map[string]string while
+// filtering the keys through a []string
 func filterFields(fields []string, fieldsMap map[string]string) []string {
 	var res = make([]string, 0)
 	for _, field := range fields {

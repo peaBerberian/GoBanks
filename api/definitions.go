@@ -32,12 +32,15 @@ type TransactionJSON struct {
 	CategoryId      int     `json:"category"`
 	TransactionDate int64   `json:"transactionDate"`
 	RecordDate      int64   `json:"recordDate"`
+	Reference       string  `json:"reference"`
 }
 
 type CategoryJSON struct {
-	Id     int           `json:"id"`
-	Name   string        `json:"name"`
-	Childs *CategoryJSON `json"childs"`
+	Id          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	// TODO
+	// Childs      *CategoryJSON `json"childs"`
 }
 
 type TokenJSON struct {

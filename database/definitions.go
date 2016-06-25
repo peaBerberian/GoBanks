@@ -28,7 +28,7 @@ type CategoryDataBase interface {
 	AddCategory(DBCategoryParams) (DBCategory, error)
 
 	// Remove multiple Categories, based on filters
-	UpdateCategories(DBCategoryFilters, []string, DBCategoryParams)
+	UpdateCategories(DBCategoryFilters, []string, DBCategoryParams) error
 
 	// Update the attributes of multiple categories, based on filters and field
 	// names.
@@ -36,7 +36,7 @@ type CategoryDataBase interface {
 
 	// Get a multiple categories based on filters.
 	// The second param is  the wanted fields
-	GetCagories(DBCategoryFilters, []string)
+	GetCategories(DBCategoryFilters, []string, uint) ([]DBCategory, error)
 }
 
 // Perform operations on the DataBase relative to Bank Accounts
@@ -95,8 +95,7 @@ type GoBanksDataBase interface {
 	Close() error
 
 	UserDataBase
-	// TODO
-	// CategoryDataBase
+	CategoryDataBase
 	BankAccountDataBase
 	BankDatabase
 	TransactionDataBase
@@ -225,10 +224,17 @@ type DBUserParams struct {
 
 // Parameters awaited to create a new Category in the CategoryDatabase
 type DBCategoryParams struct {
-	UserId      int
-	Name        string
+	// The user adding the category
+	UserId int
+
+	// The 'name' of the category
+	Name string
+
+	// Optional description
 	Description string
-	ParentId    int
+
+	// Id of the category's parent, for nesting
+	ParentId int
 }
 
 // Parameters awaited to create a new BankAccount in the BankAccountDatabase
@@ -306,6 +312,9 @@ type DBCategoryFilters struct {
 	// Filter by using the Categories Ids
 	Ids DBIntArrayFilter
 
+	// Filter by using the Categories names
+	Names DBStringArrayFilter
+
 	// Filter by using the User Id
 	UserId DBIntFilter
 
@@ -321,6 +330,7 @@ type DBAccountFilters struct {
 	Ids DBIntArrayFilter
 
 	// Filter by using the User Id
+	// TODO REMOVE?
 	UserId DBIntFilter
 
 	// Filter by using the Bank Ids corresponding to the accounts
@@ -352,12 +362,14 @@ type DBTransactionFilters struct {
 	Ids DBIntArrayFilter
 
 	// Filter by using the User Id
+	// TODO REMOVE?
 	UserId DBIntFilter
 
 	// Filter by using the Bank Accounts Ids corresponding to the transactions
 	AccountIds DBIntArrayFilter
 
 	// Filter by using the Bank Ids corresponding to the transactions
+	// TODO REMOVE?
 	BankIds DBIntArrayFilter
 
 	// Filter by using the Categories Ids corresponding to the transactions
@@ -387,17 +399,8 @@ type DBTransactionFilters struct {
 	// Filter by setting the maximum credit
 	MaxCredit DBFloatFilter
 
-	// Filter by label
-	// TODO
-	SearchLabel DBStringFilter
-
-	// Filter by description
-	// TODO
-	SearchDescription DBStringFilter
-
-	// Filter by reference
-	// TODO
-	SearchReference DBStringFilter
+	// Filter by setting the bank's reference
+	References DBStringArrayFilter
 }
 
 // Common base of filters
@@ -452,43 +455,43 @@ type DBTimeFilter struct {
 // About to get really ugly
 
 // Activate and set the value for a DBIntFilter
-func (d DBIntFilter) SetFilter(val int) {
+func (d *DBIntFilter) SetFilter(val int) {
 	d.activated = true
 	d.value = val
 }
 
 // Activate and set the value for a DBIntArrayFilter
-func (d DBIntArrayFilter) SetFilter(val []int) {
+func (d *DBIntArrayFilter) SetFilter(val []int) {
 	d.activated = true
 	d.value = val
 }
 
 // Activate and set the value for a DBStringFilter
-func (d DBStringFilter) SetFilter(val string) {
+func (d *DBStringFilter) SetFilter(val string) {
 	d.activated = true
 	d.value = val
 }
 
 // Activate and set the value for a DBStringArrayFilter
-func (d DBStringArrayFilter) SetFilter(val []string) {
+func (d *DBStringArrayFilter) SetFilter(val []string) {
 	d.activated = true
 	d.value = val
 }
 
 // Activate and set the value for a DBBoolFilter
-func (d DBBoolFilter) SetFilter(val bool) {
+func (d *DBBoolFilter) SetFilter(val bool) {
 	d.activated = true
 	d.value = val
 }
 
 // Activate and set the value for a DBFloatFilter
-func (d DBFloatFilter) SetFilter(val float32) {
+func (d *DBFloatFilter) SetFilter(val float32) {
 	d.activated = true
 	d.value = val
 }
 
 // Activate and set the value for a DBTimeFilter
-func (d DBTimeFilter) SetFilter(val time.Time) {
+func (d *DBTimeFilter) SetFilter(val time.Time) {
 	d.activated = true
 	d.value = val
 }

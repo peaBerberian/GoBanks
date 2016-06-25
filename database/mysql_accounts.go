@@ -6,7 +6,11 @@ func (gbs *goBanksSql) AddAccount(acc DBAccountParams) (DBAccount, error) {
 	}
 
 	values := make([]interface{}, 0)
-	values = append(values, acc.BankId, acc.Name, acc.Description)
+	values = append(values,
+		acc.BankId,
+		acc.Name,
+		acc.Description,
+	)
 
 	id, err := gbs.insertInTable(account_table,
 		stripIdField(account_fields), values)
@@ -34,7 +38,6 @@ func (gbs *goBanksSql) UpdateAccounts(f DBAccountFilters,
 	var values = make([]interface{}, 0)
 	var filteredFields = make([]string, 0)
 
-	// TODO do that with reflection
 	for _, field := range fields {
 		switch field {
 		case "BankId":
@@ -58,6 +61,7 @@ func (gbs *goBanksSql) RemoveAccounts(f DBAccountFilters) error {
 	if !valid {
 		return nil
 	}
+
 	var queryString = joinStringsWithSpace(deleteString, whereString)
 
 	_, err := gbs.execQuery(queryString, args...)
@@ -77,7 +81,8 @@ func (gbs *goBanksSql) GetAccounts(f DBAccountFilters,
 
 	var queryString = joinStringsWithSpace(selectString, whereString)
 	if limit != 0 {
-		joinStringsWithSpace(queryString, constructLimitString(limit))
+		queryString = joinStringsWithSpace(queryString, "LIMIT ?")
+		args = append(args, limit)
 	}
 
 	rows, err := gbs.getRows(queryString, args...)
@@ -92,7 +97,6 @@ func (gbs *goBanksSql) GetAccounts(f DBAccountFilters,
 
 		var values = make([]interface{}, 0)
 
-		// TODO do that with reflection
 		for _, field := range fields {
 			switch field {
 			case "Id":
