@@ -11,7 +11,12 @@ import (
 )
 
 // DBBank properties gettable through this handler
-var gettable_bank_infos = []string{"Id", "UserId", "Name", "Description"}
+var gettable_bank_fields = []string{
+	"Id",
+	"UserId",
+	"Name",
+	"Description",
+}
 
 // handleBanks is the main handler for call on the /bank api. It dispatches
 // to other function based on the HTTP method used the typical REST CRUD
@@ -52,7 +57,7 @@ func handleBankRead(w http.ResponseWriter, r *http.Request,
 	queryStringToStringArrayFilter(queryString, "name", &f.Names)
 	limit := getQueryStringLimit(queryString)
 
-	vals, err := database.GoDB.GetBanks(f, gettable_bank_infos, limit)
+	vals, err := database.GoDB.GetBanks(f, gettable_bank_fields, limit)
 	if err != nil {
 		handleError(w, queryOperationError{})
 		return
@@ -155,8 +160,7 @@ func handleBankUpdate(w http.ResponseWriter, r *http.Request,
 	}
 
 	var f database.DBBankFilters
-	f.Ids.Activated = true
-	f.Ids.Value = []int{id}
+	f.Ids.SetFilter([]int{id})
 
 	if err = database.GoDB.UpdateBanks(f, fields, bankElem); err != nil {
 		handleError(w, queryOperationError{})
@@ -179,12 +183,10 @@ func handleBankDelete(w http.ResponseWriter, r *http.Request,
 			return
 		}
 
-		f.Ids.Activated = true
-		f.Ids.Value = []int{id}
+		f.Ids.SetFilter([]int{id})
 	}
 
-	f.UserId.Activated = true
-	f.UserId.Value = t.UserId
+	f.UserId.SetFilter(t.UserId)
 
 	if err := database.GoDB.RemoveBanks(f); err != nil {
 		handleError(w, queryOperationError{})
@@ -205,8 +207,7 @@ func handleBankReplace(w http.ResponseWriter, r *http.Request,
 	}
 
 	var f database.DBBankFilters
-	f.UserId.Activated = true
-	f.UserId.Value = t.UserId
+	f.UserId.SetFilter(t.UserId)
 
 	if err := database.GoDB.RemoveBanks(f); err != nil {
 		handleError(w, queryOperationError{})
@@ -240,13 +241,11 @@ func checkPermissionForBank(t *auth.UserToken, bankId int) OperationError {
 func userHasBank(userId int, bankId int) (bool, error) {
 	var f database.DBBankFilters
 
-	f.UserId.Activated = true
-	f.UserId.Value = userId
+	f.UserId.SetFilter(userId)
 
-	f.Ids.Activated = true
-	f.Ids.Value = []int{bankId}
+	f.Ids.SetFilter([]int{bankId})
 
-	var fields = gettable_bank_infos
+	var fields = gettable_bank_fields
 	val, err := database.GoDB.GetBanks(f, fields, 0)
 	if len(val) == 0 || err != nil {
 		return false, err

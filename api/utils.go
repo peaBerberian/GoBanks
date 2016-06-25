@@ -28,8 +28,7 @@ func parseJson(input []byte) (map[string]interface{}, error) {
 
 func getBankIdsForUserId(userId int) ([]int, error) {
 	var banksFilter database.DBBankFilters
-	banksFilter.UserId.Activated = true
-	banksFilter.UserId.Value = userId
+	banksFilter.UserId.SetFilter(userId)
 	bnks, err := database.GoDB.GetBanks(banksFilter, []string{"Id"}, 0)
 	if err != nil {
 		return []int{}, err
@@ -44,8 +43,7 @@ func getBankIdsForUserId(userId int) ([]int, error) {
 func getAccountIdsForBankIds(bankIds []int) ([]int, error) {
 
 	var accountsFilter database.DBAccountFilters
-	accountsFilter.BankIds.Activated = true
-	accountsFilter.BankIds.Value = bankIds
+	accountsFilter.BankIds.SetFilter(bankIds)
 	accs, err := database.GoDB.GetAccounts(accountsFilter, []string{"Id"}, 0)
 	if err != nil {
 		return []int{}, err
@@ -151,14 +149,11 @@ func getQueryStringLimit(qs url.Values) uint {
 }
 
 func addIntArrayFilter(x []int, f *database.DBIntArrayFilter) {
-	f.Activated = true
-	f.Value = x
+	f.SetFilter(x)
 }
 
 func addIntFilter(x int, f *database.DBIntFilter) {
-	f.Activated = true
-	fmt.Println(x)
-	f.Value = x
+	f.SetFilter(x)
 	fmt.Printf("%+v", f)
 }
 
@@ -166,8 +161,7 @@ func queryStringToStringArrayFilter(qs url.Values, str string,
 	f *database.DBStringArrayFilter) {
 	if ctnt := qs.Get(str); ctnt != "" {
 		var strArr []string
-		f.Activated = true
-		f.Value = append(strArr, strings.Split(ctnt, ",")...)
+		f.SetFilter(append(strArr, strings.Split(ctnt, ",")...))
 	}
 }
 
@@ -181,8 +175,7 @@ func queryStringToIntArrayFilter(qs url.Values, str string,
 				intArr = append(intArr, toInt)
 			}
 			if len(intArr) > 0 {
-				f.Activated = true
-				f.Value = intArr
+				f.SetFilter(intArr)
 			}
 		}
 	}

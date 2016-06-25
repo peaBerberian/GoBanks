@@ -29,7 +29,7 @@ type TransactionJSON struct {
 	Label           string  `json:"label"`
 	Debit           float32 `json:"debit"`
 	Credit          float32 `json:"credit"`
-	CategoryId      string  `json:"category"`
+	CategoryId      int     `json:"category"`
 	TransactionDate int64   `json:"transactionDate"`
 	RecordDate      int64   `json:"recordDate"`
 }

@@ -45,12 +45,10 @@ func handleTransactions(w http.ResponseWriter, r *http.Request,
 			}
 		}
 		if len(intArray) > 0 {
-			ft.AccountIds.Activated = true
-			ft.AccountIds.Value = intArray
+			ft.AccountIds.SetFilter(intArray)
 		}
 	} else {
-		ft.AccountIds.Activated = true
-		ft.AccountIds.Value = authorizedAccountIds
+		ft.AccountIds.SetFilter(authorizedAccountIds)
 	}
 
 	// vals, err := database.GoDB.GetTransactions(ft)

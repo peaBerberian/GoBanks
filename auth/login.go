@@ -81,8 +81,7 @@ func getUserFromUsername(username string) (db.DBUser, AuthenticationError) {
 
 	// setting filters
 	var f db.DBUserFilters
-	f.Name.Activated = true
-	f.Name.Value = username
+	f.Name.SetFilter(username)
 
 	var fields = []string{"Id", "Name", "PasswordHash", "Salt", "Administrator"}
 	user, err := db.GoDB.GetUser(f, fields)
@@ -128,8 +127,7 @@ func newUser(username string, password string,
 func isUsernameTaken(username string) (bool, error) {
 	// setting filters
 	var f db.DBUserFilters
-	f.Name.Activated = true
-	f.Name.Value = username
+	f.Name.SetFilter(username)
 	return checkExists(f)
 }
 

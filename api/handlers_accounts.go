@@ -10,7 +10,12 @@ import (
 	"github.com/peaberberian/GoBanks/database"
 )
 
-var gettable_account_infos = []string{"Id", "BankId", "Name", "Description"}
+var gettable_account_fields = []string{
+	"Id",
+	"BankId",
+	"Name",
+	"Description",
+}
 
 func handleAccounts(w http.ResponseWriter, r *http.Request,
 	t *auth.UserToken) {
@@ -37,21 +42,20 @@ func handleAccountRead(w http.ResponseWriter, r *http.Request,
 	var f database.DBAccountFilters
 
 	// always filter on the current user
-	f.UserId.Activated = true
-	f.UserId.Value = t.UserId
+	f.UserId.SetFilter(t.UserId)
 
 	if hasIdInUrl {
-		f.Ids.Activated = true
-		f.Ids.Value = []int{id}
+		f.Ids.SetFilter([]int{id})
 	}
 
-	// if only some accounts are wanted, construct filter
+	// if only some accounts are wanted, construct filters
 	queryStringToStringArrayFilter(queryString, "name", &f.Names)
 	queryStringToIntArrayFilter(queryString, "id", &f.BankIds)
 	queryStringToIntArrayFilter(queryString, "bank", &f.BankIds)
+
 	limit := getQueryStringLimit(queryString)
 
-	vals, err := database.GoDB.GetAccounts(f, gettable_account_infos, limit)
+	vals, err := database.GoDB.GetAccounts(f, gettable_account_fields, limit)
 	if err != nil {
 		handleError(w, queryOperationError{})
 		return
@@ -167,8 +171,7 @@ func handleAccountUpdate(w http.ResponseWriter, r *http.Request,
 	}
 
 	var f database.DBAccountFilters
-	f.Ids.Activated = true
-	f.Ids.Value = []int{id}
+	f.Ids.SetFilter([]int{id})
 
 	if err = database.GoDB.UpdateAccounts(f, fields,
 		accountElem); err != nil {
@@ -203,12 +206,10 @@ func handleAccountDelete(w http.ResponseWriter, r *http.Request,
 			return
 		}
 
-		f.Ids.Activated = true
-		f.Ids.Value = []int{id}
+		f.Ids.SetFilter([]int{id})
 	}
 
-	f.BankIds.Activated = true
-	f.BankIds.Value = bankIds
+	f.BankIds.SetFilter(bankIds)
 
 	if err := database.GoDB.RemoveAccounts(f); err != nil {
 		handleError(w, queryOperationError{})
@@ -234,8 +235,7 @@ func handleAccountReplace(w http.ResponseWriter, r *http.Request,
 	}
 
 	var f database.DBAccountFilters
-	f.BankIds.Activated = true
-	f.BankIds.Value = bankIds
+	f.BankIds.SetFilter(bankIds)
 
 	if err := database.GoDB.RemoveAccounts(f); err != nil {
 		handleError(w, queryOperationError{})
