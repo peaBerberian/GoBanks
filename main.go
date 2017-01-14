@@ -19,6 +19,6 @@ func main() {
 	// Update token expiration from config
 	auth.SetTokenExpiration(conf.TokenExpiration)
 
-	api.Start(8080)
+	api.Start(conf.ServerPort, conf.CertPath, conf.KeyPath)
 	database.GoDB.Close()
 }

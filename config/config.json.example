@@ -6,5 +6,7 @@
     "access": "tcp(myurl:myPort)",
     "database": "GoBanks"
   },
-  "port": 8080
+  "port": 8080,
+  "key": "key.pem",
+  "certificate": "cert.pem"
 }

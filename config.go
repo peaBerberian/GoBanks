@@ -11,6 +11,8 @@ type configFile struct {
 	Database        interface{} `json:"database"`
 	TokenExpiration int         `json:"jwtExpirationOffset"`
 	ServerPort      int         `json:"port"`
+	CertPath        string      `json:"certificate"`
+	KeyPath         string      `json:"key"`
 }
 
 // getConfig parse the config file. See config_file_path.
