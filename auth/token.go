@@ -80,17 +80,15 @@ func ParseToken(tokenString string) (UserToken, AuthenticationError) {
 	}
 	expirationDate = time.Unix(int64(exp64), 0)
 
-	var token = UserToken{
-		UserId:          userId,
-		IsAdministrator: isAdministrator,
-		ExpirationDate:  expirationDate,
-	}
-
-	if token.ExpirationDate.Unix() <= time.Now().Unix() {
+	if expirationDate.Unix() <= time.Now().Unix() {
 		return UserToken{}, expiredTokenError{}
 	}
 
-	return token, nil
+	return UserToken{
+		UserId:          userId,
+		IsAdministrator: isAdministrator,
+		ExpirationDate:  expirationDate,
+	}, nil
 }
 
 // createToken creates a new token string for a specific user.
