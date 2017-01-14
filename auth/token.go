@@ -62,18 +62,20 @@ func ParseToken(tokenString string) (UserToken, AuthenticationError) {
 		return UserToken{}, unreadableTokenError{field}
 	}
 
-	if userId64, ok := jwToken.Claims["uid"].(float64); !ok {
+	var claims = jwToken.Claims.(jwt.MapClaims)
+
+	if userId64, ok := claims["uid"].(float64); !ok {
 		return createUnreadableError("uid")
 	} else {
 		userId = int(userId64)
 	}
 
-	if isAdministrator, ok = jwToken.Claims["adm"].(bool); !ok {
+	if isAdministrator, ok = claims["adm"].(bool); !ok {
 		return createUnreadableError("adm")
 	}
 
 	var exp64 float64
-	if exp64, ok = jwToken.Claims["exp"].(float64); !ok {
+	if exp64, ok = claims["exp"].(float64); !ok {
 		return createUnreadableError("exp")
 	}
 	expirationDate = time.Unix(int64(exp64), 0)
@@ -110,9 +112,10 @@ func createToken(username string) (string, AuthenticationError) {
 	var isAdmin = user.Administrator
 
 	jwToken := jwt.New(jwt.SigningMethodHS256)
-	jwToken.Claims["exp"] = expirationDate
-	jwToken.Claims["uid"] = userId
-	jwToken.Claims["adm"] = isAdmin
+	claims := jwToken.Claims.(jwt.MapClaims)
+	claims["exp"] = expirationDate
+	claims["uid"] = userId
+	claims["adm"] = isAdmin
 	tokenString, serr := jwToken.SignedString([]byte(tokenSigningKey))
 	if serr != nil {
 		return "", tokenSigningError{}
