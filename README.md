@@ -88,6 +88,8 @@ Exhaustive list of needed APIs.
 ``/summary``
 ```json
 {
+  "total": 21324,
+  "lastTransactionDate": 1224325543,
   "banks": [
     {
       "id": 2,
@@ -118,6 +120,33 @@ Exhaustive list of needed APIs.
         }
       ]
     }
+  ],
+
+  "categories": [
+    {
+      "id": 2,
+      "name": "restaurant"
+    },
+    {
+      "id": 9,
+      "name": "technology"
+    }
   ]
 }
 ```
+
+## TODO
+  - all sql_ methods take the userId (denormalize bdd to include id? or cache?)
+  - add way to calculate the real total for each account (diff with transaction sum? / date + state at this date + transaction sum from date?)
+  - add rest of the routes. First summary then report/categories then test then rest while frontin'
+  - begin to program the front and webserver (!!)
+  - add personal parsers for csv etc.
+  - add autofilters to automatically set categories (front or back?)
+  - nested categories
+  - crypt transactions/banks/accounts/categories?
+  - switch all code to elixir or something
+  - simplify that monstruosity
+  - README To explain every API
+  - implement cache somewhere (over the rainbow?)
+  - become richer than uncle scrooge
+  - sleep
