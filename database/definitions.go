@@ -3,6 +3,7 @@ package database
 import "time"
 
 // Perform operations on the DataBase relative to Users
+// TODO Allow only one user? Removes a lot of complexity
 type UserDataBase interface {
 	// Number of users stored in the database
 	UserLength() (len int, err error)
@@ -35,7 +36,8 @@ type CategoryDataBase interface {
 	RemoveCategories(DBCategoryFilters) error
 
 	// Get a multiple categories based on filters.
-	// The second param is  the wanted fields
+	// The second param is  the wanted fields TODO Remove?
+	// The third is the max number of item you wish to receive (0 = no limit)
 	GetCategories(DBCategoryFilters, []string, uint) ([]DBCategory, error)
 }
 
@@ -52,7 +54,8 @@ type BankAccountDataBase interface {
 	RemoveAccounts(DBAccountFilters) error
 
 	// Get multiple accounts, based on filters
-	// The second param is  the wanted fields
+	// The second param is  the wanted fields TODO Remove?
+	// The third is the max number of item you wish to receive (0 = no limit)
 	GetAccounts(DBAccountFilters, []string, uint) ([]DBAccount, error)
 }
 
@@ -68,7 +71,8 @@ type BankDatabase interface {
 	RemoveBanks(DBBankFilters) error
 
 	// Get multiple banks, based on filters
-	// The second param is  the wanted fields
+	// The second param is  the wanted fields TODO Remove?
+	// The third is the max number of item you wish to receive (0 = no limit)
 	GetBanks(DBBankFilters, []string, uint) ([]DBBank, error)
 }
 
@@ -85,15 +89,23 @@ type TransactionDataBase interface {
 	RemoveTransactions(DBTransactionFilters) error
 
 	// Get multiple transactions, based on filters
-	// The second param is  the wanted fields
+	// The second param is  the wanted fields TODO Remove?
+	// The third is the max number of item you wish to receive (0 = no limit)
 	GetTransactions(DBTransactionFilters, []string, uint) ([]DBTransaction, error)
+
+	// Get the sum of all debits for the given filters
+	// GetDebit(DBTransactionFilters)
+
+	// Get the sum of all credits for the given filters
+	// GetCredit(DBTransactionFilters)
+
+	// Get Report for the given filters (debit and credit)
+	// GetReport(DBTransactionFilters)
 }
 
-// Interface that any implementation of GoBanks databases must implement
+// Interface GoBanks databases must implement
 type GoBanksDataBase interface {
-	// Free/close the db if needed
-	Close() error
-
+	Close() error // Free/close the db if needed
 	UserDataBase
 	CategoryDataBase
 	BankAccountDataBase
@@ -103,310 +115,155 @@ type GoBanksDataBase interface {
 
 // Representation of a single User as returned by the UserDatabase
 type DBUser struct {
-	// Id for the user in the database
-	// Set by the database's methods.
-	Id int
-
-	// User's Name
-	Name string
-
-	// Hash of the user's password
-	PasswordHash string
-
-	// Password's salt
-	Salt string
-
-	// True if the user is an administrator
-	Administrator bool
+	Id            int    // Id for the user in the database
+	Name          string // User's Name
+	PasswordHash  string // Hash of the user's password
+	Salt          string // Password's salt
+	Administrator bool   // True if the user is an administrator TODO remove
 }
 
 // Representation of a single Category as returned by the CategoryDatabase
 type DBCategory struct {
-	// Id of the category in the database
-	// Set by the database's methods.
-	Id int
-
-	// User linked to this category
-	UserId int
-
-	// Name of the category
-	Name string
-
-	// Optional description
-	Description string
-
-	// Id of the parent category
-	// 0 if none
-	ParentId int
+	Id          int    // Id of the category in the database
+	UserId      int    // User linked to this category
+	Name        string // Name of the category
+	Description string // Optional description
+	ParentId    int    // Id of the parent category, 0 if none (TODO remove)
 }
 
 // Representation of a single Account as returned by the BankAccountDatabase
 type DBAccount struct {
-	// Id of the bank account in the database
-	// Set by the database's methods.
-	Id int
-
-	// Bank Id linked to this account
-	BankId int
-
-	// Name of the bank account
-	Name string
-
-	// Optional description
-	Description string
+	Id          int    // Id of the bank account in the database
+	BankId      int    // Bank Id linked to this account
+	Name        string // Name of the bank account
+	Description string // Optional description
 }
 
 // Representation of a single Bank as returned by the BankDatabase
 type DBBank struct {
-	// Id of the bank in the database
-	// Set by the database's methods.
-	Id int
-
-	// User linked to this Bank
-	// LinkedUser User
-	UserId int
-
-	// Name of the bank
-	Name string
-
-	// Optional description
-	Description string
+	Id          int    // Id of the bank in the database
+	UserId      int    // User linked to this Bank
+	Name        string // Name of the bank
+	Description string // Optional description
 }
 
 // Representation of a single Transaction as returned by the TransactionDatabase
 type DBTransaction struct {
-	// Id of the transaction in the database
-	// Set by the database's methods.
-	Id int
-
-	// Id for the account concerned by this transaction
-	AccountId int
-
-	// Label describing the transaction
-	Label string
-
-	// Category of the transaction
-	CategoryId int
-
-	// Details on the transaction
-	Description string
-
-	// Date on which the transaction was done
-	TransactionDate time.Time
-
-	// Date on which the transaction was recorded by the bank
-	RecordDate time.Time
-
-	// Amount of money going out of your pocket
-	Debit float32
-
-	// Amount of money going in your pocket
-	Credit float32
-
-	// Bank Reference (id)
-	Reference string
+	Id              int       // Id of the transaction in the database
+	AccountId       int       // Id for the account concerned by this transaction
+	Label           string    // Label describing the transaction
+	CategoryId      int       // Category of the transaction
+	Description     string    // Details on the transaction
+	TransactionDate time.Time // Date at which the transaction was done
+	RecordDate      time.Time // Date at which the transaction was recorded
+	Debit           float32   // Amount of money going out of your pocket
+	Credit          float32   // Amount of money going in your pocket
+	Reference       string    // Bank Reference (id)
 }
 
 // Parameters awaited to create a new User in the UserDatabase
 type DBUserParams struct {
-	// User's Name
-	Name string
-
-	// Hash of the user's password
-	PasswordHash string
-
-	// Password's salt
-	Salt string
-
-	// True if the user is an administrator
-	Administrator bool
+	Name          string // User's Name
+	PasswordHash  string // Hash of the user's password
+	Salt          string // Password's salt
+	Administrator bool   // True if the user is an administrator (TODO Remove)
 }
 
 // Parameters awaited to create a new Category in the CategoryDatabase
 type DBCategoryParams struct {
-	// The user adding the category
-	UserId int
-
-	// The 'name' of the category
-	Name string
-
-	// Optional description
-	Description string
-
-	// Id of the category's parent, for nesting
-	ParentId int
+	UserId      int    // The user adding the category
+	Name        string // The 'name' of the category
+	Description string // Optional description
+	ParentId    int    // Id of the category's parent, for nesting (TODO Remove)
 }
 
 // Parameters awaited to create a new BankAccount in the BankAccountDatabase
 type DBAccountParams struct {
-	// Bank Id linked to this account
-	BankId int
-
-	// Name of the bank account
-	Name string
-
-	// Optional description
-	Description string
+	BankId      int    // Bank Id linked to this account
+	Name        string // Name of the bank account
+	Description string // Optional description
 }
 
 // Parameters awaited to create a new Bank in the BankDatabase
 type DBBankParams struct {
-	// The user adding the bank
-	UserId int
-
-	// The 'name' of the bank
-	Name string
-
-	// Optional description
-	Description string
+	UserId      int    // The user adding the bank
+	Name        string // The 'name' of the bank
+	Description string // Optional description
 }
 
 // Parameters awaited to create a new Transaction in the TransactionDatabase
 type DBTransactionParams struct {
-	// Id for the account concerned by this transaction
-	AccountId int
-
-	// Label describing the transaction
-	Label string
-
-	// Category of the transaction
-	CategoryId int
-
-	// Details on the transaction
-	Description string
-
-	// Date on which the transaction was done
-	TransactionDate time.Time
-
-	// Date on which the transaction was recorded by the bank
-	RecordDate time.Time
-
-	// Amount of money going out of your pocket
-	Debit float32
-
-	// Amount of money going in your pocket
-	Credit float32
-
-	// Bank Reference (id)
-	Reference string
+	AccountId       int       // Id for the account concerned by this transaction
+	Label           string    // Label describing the transaction
+	CategoryId      int       // Category of the transaction
+	Description     string    // Details on the transaction
+	TransactionDate time.Time // Date on which the transaction was done
+	RecordDate      time.Time // Date on which the transaction was recorded
+	Debit           float32   // Amount of money going out of your pocket
+	Credit          float32   // Amount of money going in your pocket
+	Reference       string    // Bank Reference (id)
 }
 
 // Filters that can be used to filter Users when doing operations on the
 // UserDatabase
 // example: filters.Id.SetValue(5)
 type DBUserFilters struct {
-	// Filter by using the User Id
-	Id DBIntFilter
-
-	// Filter by using the user's name
-	Name DBStringFilter
-
-	// Filters only Administrators TODO what? No!
-	Administrator DBBoolFilter
+	Id            DBIntFilter    // by User Id
+	Name          DBStringFilter // by user's name
+	Administrator DBBoolFilter   // Filters only Administrators TODO Remove
 }
 
 // Filters that can be used to filter Categories when doing operations on the
 // CategoryDatabase
 // example: filters.Ids.SetValue([]int{5})
 type DBCategoryFilters struct {
-	// Filter by using the Categories Ids
-	Ids DBIntArrayFilter
-
-	// Filter by using the Categories names
-	Names DBStringArrayFilter
-
-	// Filter by using the User Id
-	UserId DBIntFilter
-
-	// Filter by using the Parent Categories Ids
-	ParentIds DBIntArrayFilter
+	Ids       DBIntArrayFilter    // by Categories Ids
+	Names     DBStringArrayFilter // by Categories names
+	UserId    DBIntFilter         // by User Id
+	ParentIds DBIntArrayFilter    // by Parent Categories Ids (TODO Remove)
 }
 
 // Filters that can be used to filter Bank Accounts when doing operations on the
 // BankAccountDataBase
 // example: filters.Ids.SetValue([]int{5})
 type DBAccountFilters struct {
-	// Filter by using the Bank Account Ids
-	Ids DBIntArrayFilter
-
-	// Filter by using the User Id
-	// TODO REMOVE?
-	UserId DBIntFilter
-
-	// Filter by using the Bank Ids corresponding to the accounts
-	BankIds DBIntArrayFilter
-
-	// Filter by using the Bank Account names
-	Names DBStringArrayFilter
+	Ids     DBIntArrayFilter    // by Bank Account Ids
+	UserId  DBIntFilter         // by User Id (TODO Remove?)
+	BankIds DBIntArrayFilter    // by Bank Ids corresponding to the accounts
+	Names   DBStringArrayFilter // by Bank Account names
 }
 
 // Filters that can be used to filter Banks when doing operations on the
 // BankDataBase
 // example: filters.Ids.SetValue([]int{5})
 type DBBankFilters struct {
-	// Filter by using the Bank Ids
-	Ids DBIntArrayFilter
-
-	// Filter by using the User Id
-	UserId DBIntFilter
-
-	// Filter by using the Bank names
-	Names DBStringArrayFilter
+	Ids    DBIntArrayFilter    // by Bank Ids
+	UserId DBIntFilter         // by User Id
+	Names  DBStringArrayFilter // by Bank names
 }
 
 // Filters that can be used to filter Transactions when doing operations on the
 // TransactionDataBase
 // example: filters.Ids.SetValue([]int{5})
 type DBTransactionFilters struct {
-	// Filter by using the Transactions Ids
-	Ids DBIntArrayFilter
-
-	// Filter by using the User Id
-	// TODO REMOVE?
-	UserId DBIntFilter
-
-	// Filter by using the Bank Accounts Ids corresponding to the transactions
-	AccountIds DBIntArrayFilter
-
-	// Filter by using the Bank Ids corresponding to the transactions
-	// TODO REMOVE?
-	BankIds DBIntArrayFilter
-
-	// Filter by using the Categories Ids corresponding to the transactions
-	CategoryIds DBIntArrayFilter
-
-	// Filter by setting the minimum transaction date
-	FromTransactionDate DBTimeFilter
-
-	// Filter by setting the maximum transaction date
-	ToTransactionDate DBTimeFilter
-
-	// Filter by setting the minimum record date
-	FromRecordDate DBTimeFilter
-
-	// Filter by setting the maximum record date
-	ToRecordDate DBTimeFilter
-
-	// Filter by setting the minimum debit
-	MinDebit DBFloatFilter
-
-	// Filter by setting the maximum debit
-	MaxDebit DBFloatFilter
-
-	// Filter by setting the minimum credit
-	MinCredit DBFloatFilter
-
-	// Filter by setting the maximum credit
-	MaxCredit DBFloatFilter
-
-	// Filter by setting the bank's reference
-	References DBStringArrayFilter
+	Ids                 DBIntArrayFilter    // by Transactions Ids
+	UserId              DBIntFilter         // by User Id (TODO Remove)
+	BankIds             DBIntArrayFilter    // by Bank Ids (TODO Remove)
+	AccountIds          DBIntArrayFilter    // by Bank Accounts Ids
+	CategoryIds         DBIntArrayFilter    // by Categories Ids
+	FromTransactionDate DBTimeFilter        // by minimum transaction date
+	ToTransactionDate   DBTimeFilter        // by maximum transaction date
+	FromRecordDate      DBTimeFilter        // by minimum record date
+	ToRecordDate        DBTimeFilter        // by maximum record date
+	MinDebit            DBFloatFilter       // by minimum debit
+	MaxDebit            DBFloatFilter       // by maximum debit
+	MinCredit           DBFloatFilter       // by minimum credit
+	MaxCredit           DBFloatFilter       // by maximum credit
+	References          DBStringArrayFilter // by bank's reference
 }
 
 // Common base of filters
-type dbBaseFilter struct {
-	activated bool
-}
+type dbBaseFilter struct{ activated bool }
 
 func (d dbBaseFilter) isFilterActivated() bool { return d.activated }
 

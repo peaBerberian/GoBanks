@@ -35,10 +35,10 @@ var query_string_properties = map[string]string{
 	"ToTransactionDate":   "tto",
 	"FromRecordDate":      "rfrom",
 	"ToRecordDate":        "rto",
-	"MinDebit":            "min_d",
-	"MaxDebit":            "max_d",
-	"MinCredit":           "min_c",
-	"MaxCredit":           "max_c",
+	"MinDebit":            "mind",
+	"MaxDebit":            "maxd",
+	"MinCredit":           "minc",
+	"MaxCredit":           "maxc",
 	"References":          "ref",
 }
 

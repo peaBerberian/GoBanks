@@ -1,9 +1,13 @@
 package database
 
+// AddTransaction add a single transaction in the database
+// Refer to DBTransactionParams to know the params you should provide
+// TODO add userId and account checking (via cache?) here
 func (gbs *goBanksSql) AddTransaction(trn DBTransactionParams) (
 	DBTransaction,
 	error,
 ) {
+	// an accountId is required for every transactions
 	if trn.AccountId == 0 {
 		return DBTransaction{}, missingInformationsError{"AccountId"}
 	}
@@ -41,10 +45,16 @@ func (gbs *goBanksSql) AddTransaction(trn DBTransactionParams) (
 	}, nil
 }
 
-func (gbs *goBanksSql) UpdateTransactions(f DBTransactionFilters,
-	fields []string, trn DBTransactionParams) error {
+// UpdateTransactions update one or multiple transactions in the database
+// Basically, you provide:
+//   - DBTransactionFilters to know which transaction(s) to update
+//   - A list of fields, which are the specific fields you want to update
+//   - DBTransactionParams, containing the corresponding fields' value
+// TODO add userId and account checking (via cache?) here
+func (gbs *goBanksSql) UpdateTransactions(filters DBTransactionFilters,
+	updatedFields []string, trn DBTransactionParams) error {
 
-	var whereString, args, valid = constructTransactionFilterQuery(f)
+	var whereString, args, valid = constructTransactionFilterQuery(filters)
 	if !valid {
 		return nil
 	}
@@ -52,7 +62,9 @@ func (gbs *goBanksSql) UpdateTransactions(f DBTransactionFilters,
 	var values = make([]interface{}, 0)
 	var filteredFields = make([]string, 0)
 
-	for _, field := range fields {
+	// iterate through updatedFields
+	// This is ugly as pie but it seems the idiomatic way of doing it
+	for _, field := range updatedFields {
 		switch field {
 		case "AccountId":
 			values = append(values, trn.AccountId)
@@ -87,9 +99,12 @@ func (gbs *goBanksSql) UpdateTransactions(f DBTransactionFilters,
 	return gbs.updateTable(transaction_table, whereString, args, filteredFields, values)
 }
 
-func (gbs *goBanksSql) RemoveTransactions(f DBTransactionFilters) error {
+// RemoveTransaction removes one or multiple transactions from the database
+// based on filters
+// TODO add userId and account checking (via cache?) here
+func (gbs *goBanksSql) RemoveTransactions(filters DBTransactionFilters) error {
 	var deleteString = constructDeleteString(transaction_table)
-	var whereString, args, valid = constructTransactionFilterQuery(f)
+	var whereString, args, valid = constructTransactionFilterQuery(filters)
 	if !valid {
 		return nil
 	}
@@ -100,14 +115,19 @@ func (gbs *goBanksSql) RemoveTransactions(f DBTransactionFilters) error {
 	return err
 }
 
-func (gbs *goBanksSql) GetTransactions(f DBTransactionFilters,
+// GetTransactions returns one or multiple transactions from the database
+// based on filters
+// TODO add userId and account checking (via cache?) here
+// TODO integrate intelligently fields into the select, maybe add things
+// like category (string) / bank (string) / account (string)
+func (gbs *goBanksSql) GetTransactions(filters DBTransactionFilters,
 	fields []string, limit uint) ([]DBTransaction,
 	error) {
 
 	var selectString = constructSelectString(transaction_table,
 		filterFields(fields, transaction_fields))
 
-	var whereString, args, valid = constructTransactionFilterQuery(f)
+	var whereString, args, valid = constructTransactionFilterQuery(filters)
 	if !valid {
 		return []DBTransaction{}, nil
 	}
@@ -172,7 +192,7 @@ func (gbs *goBanksSql) GetTransactions(f DBTransactionFilters,
 //   For example -> 3, "toto"
 // Also returns a boolean if the resulting query is not doable (ex: trying to
 // filter users with an empty array of int).
-func constructTransactionFilterQuery(f DBTransactionFilters) (string,
+func constructTransactionFilterQuery(filters DBTransactionFilters) (string,
 	[]interface{}, bool) {
 
 	var conditionString string
@@ -185,34 +205,34 @@ func constructTransactionFilterQuery(f DBTransactionFilters) (string,
 		transaction_fields["Reference"]}
 
 	ok := addFiltersOneOf(&conditionString, &args, fieldsOneOf,
-		f.Ids,
-		f.AccountIds,
-		f.CategoryIds,
-		f.References)
+		filters.Ids,
+		filters.AccountIds,
+		filters.CategoryIds,
+		filters.References)
 
 	addFilterGEq(&conditionString, &args,
-		transaction_fields["TransactionDate"], f.FromTransactionDate)
+		transaction_fields["TransactionDate"], filters.FromTransactionDate)
 
 	addFilterLEq(&conditionString, &args,
-		transaction_fields["TransactionDate"], f.ToTransactionDate)
+		transaction_fields["TransactionDate"], filters.ToTransactionDate)
 
 	addFilterGEq(&conditionString, &args,
-		transaction_fields["RecordDate"], f.FromRecordDate)
+		transaction_fields["RecordDate"], filters.FromRecordDate)
 
 	addFilterLEq(&conditionString, &args,
-		transaction_fields["RecordDate"], f.ToRecordDate)
+		transaction_fields["RecordDate"], filters.ToRecordDate)
 
 	addFilterGEq(&conditionString, &args,
-		transaction_fields["Debit"], f.MinDebit)
+		transaction_fields["Debit"], filters.MinDebit)
 
 	addFilterLEq(&conditionString, &args,
-		transaction_fields["Debit"], f.MaxDebit)
+		transaction_fields["Debit"], filters.MaxDebit)
 
 	addFilterGEq(&conditionString, &args,
-		transaction_fields["Credit"], f.MinCredit)
+		transaction_fields["Credit"], filters.MinCredit)
 
 	addFilterLEq(&conditionString, &args,
-		transaction_fields["Credit"], f.MaxCredit)
+		transaction_fields["Credit"], filters.MaxCredit)
 
 	return processFilterQuery(conditionString, args, ok)
 }
