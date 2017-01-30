@@ -11,16 +11,14 @@ type UserDataBase interface {
 	// Add a single user
 	AddUser(DBUserParams) (DBUser, error)
 
-	// Remove multiple users, based on filters
+	// Remove multiple users, based on UserId
 	RemoveUser(int) error
 
-	// Update the attributes of multiple users, based on filters and field
-	// names.
-	UpdateUser(int, []string, DBUserParams) error
+	// Update the attributes of multiple users, based on UserId and params
+	UpdateUser(int, DBUserParams) error
 
 	// Get a single user based on filters.
-	// The second param is the wanted field
-	GetUser(DBUserFilters, []string) (DBUser, error)
+	GetUser(DBUserFilters) (DBUser, error)
 }
 
 // Perform operations on the DataBase relative to Categories
@@ -29,16 +27,15 @@ type CategoryDataBase interface {
 	AddCategory(DBCategoryParams) (DBCategory, error)
 
 	// Remove multiple Categories, based on filters
-	UpdateCategories(DBCategoryFilters, []string, DBCategoryParams) error
+	UpdateCategories(DBCategoryFilters, DBCategoryParams) error
 
 	// Update the attributes of multiple categories, based on filters and field
 	// names.
 	RemoveCategories(DBCategoryFilters) error
 
 	// Get a multiple categories based on filters.
-	// The second param is  the wanted fields TODO Remove?
-	// The third is the max number of item you wish to receive (0 = no limit)
-	GetCategories(DBCategoryFilters, []string, uint) ([]DBCategory, error)
+	// The second param is the max number of item you wish to receive (0 = no limit)
+	GetCategories(DBCategoryFilters, uint) ([]DBCategory, error)
 }
 
 // Perform operations on the DataBase relative to Bank Accounts
@@ -48,15 +45,14 @@ type BankAccountDataBase interface {
 
 	// Update the attributes of multiple accounts,
 	// based on filters and field names.
-	UpdateAccounts(DBAccountFilters, []string, DBAccountParams) error
+	UpdateAccounts(DBAccountFilters, DBAccountParams) error
 
 	// Remove multiple accounts, based on filters
 	RemoveAccounts(DBAccountFilters) error
 
 	// Get multiple accounts, based on filters
-	// The second param is  the wanted fields TODO Remove?
-	// The third is the max number of item you wish to receive (0 = no limit)
-	GetAccounts(DBAccountFilters, []string, uint) ([]DBAccount, error)
+	// The second param is the max number of item you wish to receive (0 = no limit)
+	GetAccounts(DBAccountFilters, uint) ([]DBAccount, error)
 }
 
 // Perform operations on the DataBase relative to Bank Accounts
@@ -65,15 +61,14 @@ type BankDatabase interface {
 	AddBank(DBBankParams) (DBBank, error)
 
 	// Update the attributes of multiple banks, based on filters and field names.
-	UpdateBanks(DBBankFilters, []string, DBBankParams) error
+	UpdateBanks(DBBankFilters, DBBankParams) error
 
 	// Remove multiple banks, based on filters
 	RemoveBanks(DBBankFilters) error
 
 	// Get multiple banks, based on filters
-	// The second param is  the wanted fields TODO Remove?
-	// The third is the max number of item you wish to receive (0 = no limit)
-	GetBanks(DBBankFilters, []string, uint) ([]DBBank, error)
+	// The second param is the max number of item you wish to receive (0 = no limit)
+	GetBanks(DBBankFilters, uint) ([]DBBank, error)
 }
 
 // Perform operations on the DataBase relative to Transactions
@@ -89,9 +84,8 @@ type TransactionDataBase interface {
 	RemoveTransactions(DBTransactionFilters) error
 
 	// Get multiple transactions, based on filters
-	// The second param is  the wanted fields TODO Remove?
-	// The third is the max number of item you wish to receive (0 = no limit)
-	GetTransactions(DBTransactionFilters, []string, uint) ([]DBTransaction, error)
+	// The second param is the max number of item you wish to receive (0 = no limit)
+	GetTransactions(DBTransactionFilters, uint) ([]DBTransaction, error)
 
 	// Get the sum of all debits for the given filters
 	// GetDebit(DBTransactionFilters)
@@ -115,11 +109,10 @@ type GoBanksDataBase interface {
 
 // Representation of a single User as returned by the UserDatabase
 type DBUser struct {
-	Id            int    // Id for the user in the database
-	Name          string // User's Name
-	PasswordHash  string // Hash of the user's password
-	Salt          string // Password's salt
-	Administrator bool   // True if the user is an administrator TODO remove
+	Id           int    // Id for the user in the database
+	Name         string // User's Name
+	PasswordHash string // Hash of the user's password
+	Salt         string // Password's salt
 }
 
 // Representation of a single Category as returned by the CategoryDatabase
@@ -161,61 +154,74 @@ type DBTransaction struct {
 	Reference       string    // Bank Reference (id)
 }
 
+// --------- PARAMS
+
 // Parameters awaited to create a new User in the UserDatabase
 type DBUserParams struct {
-	Name          string // User's Name
-	PasswordHash  string // Hash of the user's password
-	Salt          string // Password's salt
-	Administrator bool   // True if the user is an administrator (TODO Remove)
+	Name         DBStringParam // User's Name
+	PasswordHash DBStringParam // Hash of the user's password
+	Salt         DBStringParam // Password's salt
 }
 
 // Parameters awaited to create a new Category in the CategoryDatabase
 type DBCategoryParams struct {
-	UserId      int    // The user adding the category
-	Name        string // The 'name' of the category
-	Description string // Optional description
-	ParentId    int    // Id of the category's parent, for nesting (TODO Remove)
+	UserId      DBIntParam    // The user adding the category
+	Name        DBStringParam // The 'name' of the category
+	Description DBStringParam // Optional description
+	ParentId    DBIntParam    // Id of the category's parent, for nesting (TODO Remove)
 }
 
 // Parameters awaited to create a new BankAccount in the BankAccountDatabase
 type DBAccountParams struct {
-	BankId      int    // Bank Id linked to this account
-	Name        string // Name of the bank account
-	Description string // Optional description
+	BankId      DBIntParam    // Bank Id linked to this account
+	Name        DBStringParam // Name of the bank account
+	Description DBStringParam // Optional description
 }
 
 // Parameters awaited to create a new Bank in the BankDatabase
 type DBBankParams struct {
-	UserId      int    // The user adding the bank
-	Name        string // The 'name' of the bank
-	Description string // Optional description
+	UserId      DBIntParam    // The user adding the bank
+	Name        DBStringParam // The 'name' of the bank
+	Description DBStringParam // Optional description
 }
 
 // Parameters awaited to create a new Transaction in the TransactionDatabase
 type DBTransactionParams struct {
-	AccountId       int       // Id for the account concerned by this transaction
-	Label           string    // Label describing the transaction
-	CategoryId      int       // Category of the transaction
-	Description     string    // Details on the transaction
-	TransactionDate time.Time // Date on which the transaction was done
-	RecordDate      time.Time // Date on which the transaction was recorded
-	Debit           float32   // Amount of money going out of your pocket
-	Credit          float32   // Amount of money going in your pocket
-	Reference       string    // Bank Reference (id)
+	AccountId       DBIntParam    // Id for the account concerned by this transaction
+	Label           DBStringParam // Label describing the transaction
+	CategoryId      DBIntParam    // Category of the transaction
+	Description     DBStringParam // Details on the transaction
+	TransactionDate DBTimeParam   // Date on which the transaction was done
+	RecordDate      DBTimeParam   // Date on which the transaction was recorded
+	Debit           DBFloatParam  // Amount of money going out of your pocket
+	Credit          DBFloatParam  // Amount of money going in your pocket
+	Reference       DBStringParam // Bank Reference (id)
 }
 
+// ------ FILTERS
+
 // Filters that can be used to filter Users when doing operations on the
-// UserDatabase
-// example: filters.Id.SetValue(5)
+// UserDatabase.
+//
+// example:
+// ```go
+// var filters DBUserFilters
+// filters.Id.SetFilter(5) // => filters users having the Id '5'
+// filters.Name.SetFilter("to") // => filters users having the name "to"
+// ```
 type DBUserFilters struct {
-	Id            DBIntFilter    // by User Id
-	Name          DBStringFilter // by user's name
-	Administrator DBBoolFilter   // Filters only Administrators TODO Remove
+	Id   DBIntFilter    // by User Id
+	Name DBStringFilter // by user's name
 }
 
 // Filters that can be used to filter Categories when doing operations on the
 // CategoryDatabase
-// example: filters.Ids.SetValue([]int{5})
+//
+// example:
+// ```go
+// var filters DBCategoryFilters
+// filters.Ids.SetFilter([]{5, 3})
+// ```
 type DBCategoryFilters struct {
 	Ids       DBIntArrayFilter    // by Categories Ids
 	Names     DBStringArrayFilter // by Categories names
@@ -224,8 +230,13 @@ type DBCategoryFilters struct {
 }
 
 // Filters that can be used to filter Bank Accounts when doing operations on the
-// BankAccountDataBase
-// example: filters.Ids.SetValue([]int{5})
+// BankAccountDataBase.
+//
+// example:
+// ```go
+// var filters DBAccountFilters
+// filters.Ids.SetFilter([]{5, 3})
+// ```
 type DBAccountFilters struct {
 	Ids     DBIntArrayFilter    // by Bank Account Ids
 	UserId  DBIntFilter         // by User Id (TODO Remove?)
@@ -235,7 +246,12 @@ type DBAccountFilters struct {
 
 // Filters that can be used to filter Banks when doing operations on the
 // BankDataBase
-// example: filters.Ids.SetValue([]int{5})
+//
+// example:
+// ```go
+// var filters DBBankFilters
+// filters.Ids.SetFilter([]{5, 3})
+// ```
 type DBBankFilters struct {
 	Ids    DBIntArrayFilter    // by Bank Ids
 	UserId DBIntFilter         // by User Id
@@ -243,8 +259,13 @@ type DBBankFilters struct {
 }
 
 // Filters that can be used to filter Transactions when doing operations on the
-// TransactionDataBase
-// example: filters.Ids.SetValue([]int{5})
+// TransactionDataBase.
+//
+// example:
+// ```go
+// var filters DBTransactionFilters
+// filters.Ids.SetFilter([]{5, 3})
+// ```
 type DBTransactionFilters struct {
 	Ids                 DBIntArrayFilter    // by Transactions Ids
 	UserId              DBIntFilter         // by User Id (TODO Remove)
@@ -262,10 +283,64 @@ type DBTransactionFilters struct {
 	References          DBStringArrayFilter // by bank's reference
 }
 
+type dbBaseParam struct{ activated bool }
+
+type DBIntParam struct {
+	dbBaseParam
+	value int
+}
+
+type DBFloatParam struct {
+	dbBaseParam
+	value float32
+}
+
+type DBStringParam struct {
+	dbBaseParam
+	value string
+}
+
+type DBTimeParam struct {
+	dbBaseFilter
+	value string
+}
+
+func (d *DBIntParam) SetParam(val int) {
+	d.activated = true
+	d.value = val
+}
+
+func (d *DBFloatParam) SetParam(val float32) {
+	d.activated = true
+	d.value = val
+}
+
+func (d *DBStringParam) SetParam(val string) {
+	d.activated = true
+	d.value = val
+}
+
+func (d *DBTimeParam) SetParam(val time.Time) {
+	d.activated = true
+	d.value = val
+}
+
 // Common base of filters
 type dbBaseFilter struct{ activated bool }
 
 func (d dbBaseFilter) isFilterActivated() bool { return d.activated }
+
+// ugly generic dbFilter interface for using them in generic helpers
+type dbParamInterface interface {
+	isParamActivated() bool
+	getParamValue() interface{}
+}
+
+func (d dbBaseParam) isParamActivated() bool  { return d.activated }
+func (d DBIntParam) getParamValue() int       { return d.value }
+func (d DBStringParam) getParamValue() string { return d.value }
+func (d DBFloatParam) getParamValue() float32 { return d.value }
+func (d DBTimeParam) getParamValue() string   { return d.value }
 
 // Filter by setting an int value
 type DBIntFilter struct {

@@ -13,9 +13,8 @@ var tokenSigningKey string
 
 // Representation of the principal attributes of our json web token
 type UserToken struct {
-	ExpirationDate  time.Time
-	UserId          int
-	IsAdministrator bool
+	ExpirationDate time.Time
+	UserId         int
 }
 
 // SetTokenExpiration modifies the duration of a token's lifetime.
@@ -53,7 +52,6 @@ func ParseToken(tokenString string) (UserToken, AuthenticationError) {
 
 	var expirationDate time.Time
 	var userId int
-	var isAdministrator bool
 	var ok bool
 
 	var createUnreadableError = func(field string) (UserToken,
@@ -70,10 +68,6 @@ func ParseToken(tokenString string) (UserToken, AuthenticationError) {
 		userId = int(userId64)
 	}
 
-	if isAdministrator, ok = claims["adm"].(bool); !ok {
-		return createUnreadableError("adm")
-	}
-
 	var exp64 float64
 	if exp64, ok = claims["exp"].(float64); !ok {
 		return createUnreadableError("exp")
@@ -85,9 +79,8 @@ func ParseToken(tokenString string) (UserToken, AuthenticationError) {
 	}
 
 	return UserToken{
-		UserId:          userId,
-		IsAdministrator: isAdministrator,
-		ExpirationDate:  expirationDate,
+		UserId:         userId,
+		ExpirationDate: expirationDate,
 	}, nil
 }
 
@@ -107,13 +100,11 @@ func createToken(username string) (string, AuthenticationError) {
 	var dur = time.Hour * time.Duration(GetTokenExpiration())
 	var expirationDate = time.Now().Add(dur).UnixNano() / 1e6
 	var userId = user.Id
-	var isAdmin = user.Administrator
 
 	jwToken := jwt.New(jwt.SigningMethodHS256)
 	claims := jwToken.Claims.(jwt.MapClaims)
 	claims["exp"] = expirationDate
 	claims["uid"] = userId
-	claims["adm"] = isAdmin
 	tokenString, serr := jwToken.SignedString([]byte(tokenSigningKey))
 	if serr != nil {
 		return "", tokenSigningError{}

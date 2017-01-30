@@ -1,13 +1,15 @@
 package database
 
+// table used
 const user_table = "user"
 
+// fields used, in the right order
+// TODO only []string?
 var user_fields = map[string]string{
-	"Id":            "id",
-	"Name":          "name",
-	"PasswordHash":  "password",
-	"Salt":          "salt",
-	"Administrator": "administrator",
+	"Id":           "id",
+	"Name":         "name",
+	"PasswordHash": "password",
+	"Salt":         "salt",
 }
 
 const bank_table = "bank"

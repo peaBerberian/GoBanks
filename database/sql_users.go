@@ -1,5 +1,6 @@
 package database
 
+// UserLength get the number or users in the database
 func (gbs *goBanksSql) UserLength() (int, error) {
 	var len int
 	row, err := gbs.getRows("select count(*) from usr")
@@ -14,67 +15,67 @@ func (gbs *goBanksSql) UserLength() (int, error) {
 	return len, nil
 }
 
+// AddUser add a new user to the database
 func (gbs *goBanksSql) AddUser(usr DBUserParams) (DBUser, error) {
+	// get infos
+	userName := usr.Name.getParamValue()
+	passwordHash := usr.PasswordHash.getParamValue()
+	salt := usr.Salt.getParamValue()
+
+	// constructs []interface{} of inserted values in the right order
 	values := make([]interface{}, 0)
-	values = append(values, usr.Name, usr.PasswordHash,
-		usr.Salt, usr.Administrator)
+	values = append(values,
+		username,
+		passwordHash,
+		salt,
+	)
 
-	var id, err = gbs.insertInTable(user_table,
-		stripIdField(user_fields), values)
-
+	// add to table, get the UserId
+	var id, err = gbs.insertInTable(user_table, stripIdField(user_fields), values)
 	if err != nil {
 		return DBUser{}, databaseQueryError{err.Error()}
 	}
 
+	// construct DBUser from infos
 	return DBUser{
-		Id:            id,
-		Name:          usr.Name,
-		PasswordHash:  usr.PasswordHash,
-		Salt:          usr.Salt,
-		Administrator: usr.Administrator,
+		Id:           id,
+		Name:         userName,
+		PasswordHash: passwordHash,
+		Salt:         salt,
 	}, nil
 }
 
-func (gbs *goBanksSql) UpdateUser(id int, fields []string,
-	usr DBUserParams) error {
+// UpdateUser update a single user in the database, based on its UserId
+func (gbs *goBanksSql) UpdateUser(id int, usr DBUserParams) error {
+	values := make([]interface{}, 0)
+	filteredFields := make([]string, 0)
 
-	var values = make([]interface{}, 0)
-	var filteredFields = make([]string, 0)
-
-	for _, field := range fields {
-		switch field {
-		case "Name":
-			values = append(values, usr.Name)
-			filteredFields = append(filteredFields, bank_fields["Name"])
-		case "PasswordHash":
-			values = append(values, usr.PasswordHash)
-			filteredFields = append(filteredFields, bank_fields["PasswordHash"])
-		case "Salt":
-			values = append(values, usr.Salt)
-			filteredFields = append(filteredFields, bank_fields["Salt"])
-		case "Administrator":
-			values = append(values, usr.Administrator)
-			filteredFields = append(filteredFields, bank_fields["Administrator"])
-		}
+	if usr.Name.isParamActivated {
+		filteredFields = append(filteredFields, users_fields["Name"])
+		values = append(values, usr.Name.getParamValue())
+	}
+	if usr.PasswordHash.isParamActivated {
+		filteredFields = append(filteredFields, users_fields["PasswordHash"])
+		values = append(values, usr.passwordHash.getParamValue())
+	}
+	if usr.Salt.isParamActivated {
+		filteredFields = append(filteredFields, users_fields["Salt"])
+		values = append(values, usr.Salt.getParamValue())
 	}
 
 	return gbs.updateTable(user_table, "", make([]interface{}, 0),
 		filteredFields, values)
 }
 
+// RemoveUser remove a single user based on its UserId
 func (gbs *goBanksSql) RemoveUser(id int) error {
-	// TODO move that code elsewhere
 	_, err := gbs.execQuery("DELETE FROM "+user_table+" WHERE id=?", id)
 	return err
 }
 
-func (gbs *goBanksSql) GetUser(f DBUserFilters, fields []string) (DBUser, error) {
-	var selectString = constructSelectString(user_table,
-		filterFields(fields, user_fields))
-
-	// var whereString = "WHERE id=?"
-	// var args = make([]interface{}, 0)
-	// args = append(args, id)
+// GetUser get one user based on filters
+func (gbs *goBanksSql) GetUser(f DBUserFilters) (DBUser, error) {
+	var selectString = constructSelectString(user_table, getFields(user_fields))
 
 	var whereString, args, valid = constructUserFilterQuery(f)
 	if !valid {
@@ -92,21 +93,12 @@ func (gbs *goBanksSql) GetUser(f DBUserFilters, fields []string) (DBUser, error)
 		var usr DBUser
 
 		var values = make([]interface{}, 0)
-
-		for _, field := range fields {
-			switch field {
-			case "Id":
-				values = append(values, &usr.Id)
-			case "Name":
-				values = append(values, &usr.Name)
-			case "PasswordHash":
-				values = append(values, &usr.PasswordHash)
-			case "Salt":
-				values = append(values, &usr.Salt)
-			case "Administrator":
-				values = append(values, &usr.Administrator)
-			}
-		}
+		values = append(values,
+			&usr.Id,
+			&usr.Name,
+			&usr.PasswordHash,
+			&usr.Salt,
+		)
 
 		if err = rows.Scan(values...); err != nil {
 			return DBUser{}, err
@@ -133,8 +125,6 @@ func constructUserFilterQuery(f DBUserFilters) (string,
 
 	addFilterEq(&conditionString, &args, user_fields["Id"], f.Id)
 	addFilterEq(&conditionString, &args, user_fields["Name"], f.Name)
-	addFilterEq(&conditionString, &args, user_fields["Administrator"],
-		f.Administrator)
 
 	return processFilterQuery(conditionString, args, true)
 }

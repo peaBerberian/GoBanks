@@ -83,7 +83,7 @@ func getUserFromUsername(username string) (db.DBUser, AuthenticationError) {
 	var f db.DBUserFilters
 	f.Name.SetFilter(username)
 
-	var fields = []string{"Id", "Name", "PasswordHash", "Salt", "Administrator"}
+	var fields = []string{"Id", "Name", "PasswordHash", "Salt"}
 	user, err := db.GoDB.GetUser(f, fields)
 	if err != nil {
 		return db.DBUser{}, genericAuthenticationError{}
@@ -116,10 +116,9 @@ func newUser(username string, password string,
 		return db.DBUserParams{}, err
 	}
 	var user = db.DBUserParams{
-		Name:          username,
-		PasswordHash:  string(hash),
-		Salt:          salt,
-		Administrator: administrator,
+		Name:         username,
+		PasswordHash: string(hash),
+		Salt:         salt,
 	}
 	return user, nil
 }
@@ -132,7 +131,7 @@ func isUsernameTaken(username string) (bool, error) {
 }
 
 func checkExists(f db.DBUserFilters) (bool, error) {
-	var fields = []string{"Id", "Name", "PasswordHash", "Salt", "Administrator"}
+	var fields = []string{"Id", "Name", "PasswordHash", "Salt"}
 	user, err := db.GoDB.GetUser(f, fields)
 	if err != nil {
 		return false, err

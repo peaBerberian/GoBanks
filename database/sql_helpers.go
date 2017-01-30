@@ -155,6 +155,14 @@ func stripIdField(fields map[string]string) []string {
 	return res
 }
 
+func getFields(fields map[string]string) []string {
+	var res = make([]string, 0)
+	for _, field := range fields {
+		res = append(res, field)
+	}
+	return res
+}
+
 // Returns a []string by obtaining values from a map[string]string while
 // filtering the keys through a []string
 func filterFields(fields []string, fieldsMap map[string]string) []string {

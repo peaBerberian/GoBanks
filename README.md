@@ -33,6 +33,10 @@ Exhaustive list of needed APIs.
 | GET    | /report/banks             | TODO   |
 | GET    | /report/debit/banks       | TODO   |
 | GET    | /report/credit/banks      | TODO   |
+| GET    | /users                    | TODO?  |
+| POST   | /users                    | TODO?  |
+| PUT    | /users                    | TODO?  |
+| DELETE | /users                    | TODO?  |
 
 ``/report`` with the right filters ->
 ```json
@@ -136,11 +140,14 @@ Exhaustive list of needed APIs.
 ```
 
 ## TODO
-  - all sql_ methods take the userId (denormalize bdd to include id? or cache?)
-  - add way to calculate the real total for each account (diff with transaction sum? / date + state at this date + transaction sum from date?)
+  - simplify code for now (database definitions updated, good when it compile!)
+  - most sql_ methods take the userId (banks, accounts, categories and transactions) (denormalize bdd to include id? or cache?)
   - add rest of the routes. First summary then report/categories then test then rest while frontin'
+  - possibility to activate/deactive https from config (will surely have a reverse proxy anyway)
   - begin to program the front and webserver (!!)
+  - add way to calculate the real total for each account (diff with transaction sum? / date + state at this date + transaction sum from date?)
   - add personal parsers for csv etc.
+  - create web scrapper and cronjob to update?
   - add autofilters to automatically set categories (front or back?)
   - nested categories
   - crypt transactions/banks/accounts/categories?
