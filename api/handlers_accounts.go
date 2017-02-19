@@ -42,7 +42,7 @@ func handleAccountRead(w http.ResponseWriter, r *http.Request,
 	t *auth.UserToken) {
 
 	// look if we have an id (GET /accounts/35 => id == 35)
-	var id, hasIdInUrl = getApiId(r.URL.Path)
+	var id, hasIDinURL = getApiId(r.URL.Path)
 
 	var queryString = r.URL.Query()
 	var f database.DBAccountFilters
@@ -58,7 +58,7 @@ func handleAccountRead(w http.ResponseWriter, r *http.Request,
 	f.BankIds.SetFilter(bankIds)
 
 	// if an id was set in the url, filter to the record corresponding to it
-	if hasIdInUrl {
+	if hasIDinURL {
 		f.Ids.SetFilter([]int{id})
 	} else {
 		// if only some bank account names are wanted, filter
@@ -91,7 +91,7 @@ func handleAccountRead(w http.ResponseWriter, r *http.Request,
 	}
 
 	// if an id was given, we're awaiting an object, not an array.
-	if hasIdInUrl {
+	if hasIDinURL {
 		if len(vals) == 0 {
 			fmt.Fprintf(w, "{}")
 		} else {
@@ -113,7 +113,7 @@ func handleAccountCreate(w http.ResponseWriter, r *http.Request,
 	t *auth.UserToken) {
 
 	// you cannot post on a specific id, reject if you want to do that
-	if _, hasId := getApiId(r.URL.Path); hasId {
+	if _, hasID := getApiId(r.URL.Path); hasID {
 		handleNotSupportedMethod(w, r.Method)
 		return
 	}
@@ -162,11 +162,11 @@ func handleAccountUpdate(w http.ResponseWriter, r *http.Request,
 	t *auth.UserToken) {
 
 	// look if we have an id (GET /accounts/35 => id == 35)
-	var id, hasId = getApiId(r.URL.Path)
+	var id, hasID = getApiId(r.URL.Path)
 
 	// if an id was found, it means that we want to replace an element
 	// redirect to the right function
-	if !hasId {
+	if !hasID {
 		handleAccountReplace(w, r, t)
 		return
 	}
@@ -243,7 +243,7 @@ func handleAccountDelete(w http.ResponseWriter, r *http.Request,
 	t *auth.UserToken) {
 
 	// look if we have an id (GET /banks/35 => id == 35)
-	var id, hasId = getApiId(r.URL.Path)
+	var id, hasID = getApiId(r.URL.Path)
 
 	var f database.DBAccountFilters
 
@@ -256,7 +256,7 @@ func handleAccountDelete(w http.ResponseWriter, r *http.Request,
 	}
 
 	// if we have an id, check permission and set filter
-	if hasId {
+	if hasID {
 		// recuperate every account ids associated to this user
 		// (blocking database request here :(, TODO see what I can do, cache?)
 		accountIds, err := getAccountIdsForBankIds(bankIds)
@@ -346,9 +346,9 @@ func handleAccountReplace(w http.ResponseWriter, r *http.Request,
 // struct provided for the API user. If the marshalling fails or if the
 // result is nil, an empty JSON object is returned ('{}')
 func generateAccountResponse(acc database.DBAccount) string {
-	var resJson = dbAccountToAccountJSON(acc)
+	var resJSON = dbAccountToAccountJSON(acc)
 
-	resBytes, err := json.Marshal(resJson)
+	resBytes, err := json.Marshal(resJSON)
 	if err != nil || resBytes == nil {
 		return "{}"
 	}
@@ -359,11 +359,11 @@ func generateAccountResponse(acc database.DBAccount) string {
 // of DBAccount structs provided for the API user. If the marshalling fails or
 // if the result is nil, an empty JSON array is returned ('[]')
 func generateAccountsResponse(acc []database.DBAccount) string {
-	var resJson []AccountJSON
+	var resJSON []AccountJSON
 	for _, t := range acc {
-		resJson = append(resJson, dbAccountToAccountJSON(t))
+		resJSON = append(resJSON, dbAccountToAccountJSON(t))
 	}
-	resBytes, err := json.Marshal(resJson)
+	resBytes, err := json.Marshal(resJSON)
 	if err != nil || resBytes == nil {
 		return "[]"
 	}
@@ -396,12 +396,12 @@ func inputToAccountParams(input map[string]interface{}) (database.DBAccountParam
 	// The "name" field is mandatory
 	// TODO check why can't cast directly to int
 	// (don't ask me why. It just werks...)
-	bankIdStr, valid := input["bankId"].(float64)
+	bankIDStr, valid := input["bankId"].(float64)
 	if !valid {
 		return res, missingParameterError{"bankId"}
 	}
 
-	res.BankId = int(bankIdStr)
+	res.BankId = int(bankIDStr)
 	res.Description, _ = input["description"].(string)
 
 	return res, nil

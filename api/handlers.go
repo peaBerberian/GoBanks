@@ -5,7 +5,7 @@ import "net/http"
 
 import "github.com/peaberberian/GoBanks/auth"
 
-var api_calls = map[string]string{
+var apiCalls = map[string]string{
 	"authentication": "auth",
 	"transactions":   "transactions",
 	"banks":          "banks",
@@ -24,7 +24,7 @@ func handlerV1(w http.ResponseWriter, r *http.Request) {
 	var token auth.UserToken
 
 	// only route where the token shouldn't be needed
-	if route != api_calls["authentication"] {
+	if route != apiCalls["authentication"] {
 		var tokenString = getTokenFromRequest(r)
 		var err error
 		token, err = auth.ParseToken(tokenString)
@@ -35,15 +35,15 @@ func handlerV1(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch route {
-	case api_calls["authentication"]:
+	case apiCalls["authentication"]:
 		handleAuthentication(w, r, &token)
-	case api_calls["transactions"]:
+	case apiCalls["transactions"]:
 		handleTransactions(w, r, &token)
-	case api_calls["banks"]:
+	case apiCalls["banks"]:
 		handleBanks(w, r, &token)
-	case api_calls["accounts"]:
+	case apiCalls["accounts"]:
 		handleAccounts(w, r, &token)
-	case api_calls["categories"]:
+	case apiCalls["categories"]:
 		handleCategories(w, r, &token)
 	default:
 		http.NotFound(w, r)
@@ -51,9 +51,9 @@ func handlerV1(w http.ResponseWriter, r *http.Request) {
 }
 
 // routeIsInApi simply checks if the given route is in the
-// api_calls map values
+// apiCalls map values
 func routeIsInApi(route string) bool {
-	for _, val := range api_calls {
+	for _, val := range apiCalls {
 		if val == route {
 			return true
 		}
